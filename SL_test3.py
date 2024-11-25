@@ -17,18 +17,13 @@ def load_data():
 try:
     data = load_data()
     # Ensure required columns are present
-    required_columns = ["Video publish time", "Views"]
-    missing_columns = [col for col in required_columns if col not in data.columns]
-    if missing_columns:
-        st.error(f"Missing required columns: {', '.join(missing_columns)}")
+    if "Video publish time" not in data.columns or "Views" not in data.columns:
+        st.error("Required columns are missing from the dataset.")
         st.stop()
-
     # Preprocess data
     data["Video publish time"] = pd.to_datetime(data["Video publish time"], errors="coerce")
     data["day_of_week"] = data["Video publish time"].dt.day_name()
     data["hour_of_day"] = data["Video publish time"].dt.hour
-    data["Views"] = pd.to_numeric(data["Views"], errors="coerce")
-    data = data.dropna(subset=["Video publish time", "Views"])
 except Exception as e:
     st.error(f"Error loading or processing data: {e}")
     st.stop()
@@ -50,18 +45,26 @@ st.subheader("1. Analyze Peak Viewing Times")
 st.markdown("Identify trends in when viewers engage most actively with the content.")
 
 # Heatmap of Views by Day and Hour
-views_heatmap = data.pivot_table(
-    index="day_of_week", columns="hour_of_day", values="Views", aggfunc="mean"
-).reindex(index=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
+try:
+    views_heatmap = data.pivot_table(
+        index="day_of_week", columns="hour_of_day", values="Views", aggfunc="mean"
+    ).reindex(index=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
 
-st.write("**Average Views Heatmap**")
-fig, ax = plt.subplots(figsize=(12, 6))
-sns.heatmap(views_heatmap, cmap="coolwarm", annot=True, fmt=".0f", ax=ax)
-st.pyplot(fig)
+    st.write("**Average Views Heatmap**")
+    fig, ax = plt.subplots(figsize=(14, 8))
+    sns.heatmap(views_heatmap, cmap="coolwarm", annot=True, fmt=".0f", ax=ax, linewidths=.5)
+    ax.set_title("Average Views by Day and Hour")
+    st.pyplot(fig)
+except Exception as e:
+    st.error(f"Error generating heatmap: {e}")
 
+# Insights
 st.write("**Insights:**")
-st.write("- Peak viewing hours can be identified from the heatmap. Consider posting during hours with higher engagement.")
-st.write("- Adjust scheduling to avoid low-engagement periods.")
+st.write(
+    "- Identify peak days and times from the heatmap."
+    "\n- Schedule content posting during high-engagement hours."
+    "\n- Avoid low-engagement periods."
+)
 
 # 2. Content Length Analysis
 st.subheader("2. Content Length Analysis")
