@@ -79,8 +79,7 @@ except Exception as e:
 # Components plot
 st.subheader("Forecast Components")
 try:
-    fig2, ax2 = plt.subplots(figsize=(10, 6))
-    model.plot_components(forecast, ax=ax2)
+    fig2 = model.plot_components(forecast)  # No ax argument
     st.pyplot(fig2)
 except Exception as e:
     st.error(f"Error generating components plot: {e}")
