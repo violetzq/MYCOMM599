@@ -84,23 +84,27 @@ try:
 except Exception as e:
     st.error(f"Error generating components plot: {e}")
 
+from datetime import datetime
+
 # Insights from forecast
-st.subheader("Insights from Forecast")
+st.subheader("Insights from Future Forecast")
 try:
-    # Use unclamped 'yhat' for minimum insight
-    min_views_date = forecast.loc[forecast['yhat'].idxmin()]['ds']
-    min_views = forecast['yhat'].min()
+    # Get today's date
+    today = datetime.today()
 
-    # Use clamped 'yhat' for maximum insight
-    max_views_date = forecast.loc[forecast['yhat'].idxmax()]['ds']
-    max_views = forecast['yhat'].max()
+    # Filter forecast for future dates only
+    future_forecast = forecast[forecast['ds'] >= pd.Timestamp(today)]
 
-    st.write(f"The lowest predicted views are {min_views:.2f}, expected on {min_views_date.date()}.")
-    st.write(f"The highest predicted views are {max_views:.2f}, expected on {max_views_date.date()}.")
+    if not future_forecast.empty:
+        # Get the lowest and highest predicted views for future dates
+        min_views_date = future_forecast.loc[future_forecast['yhat'].idxmin()]['ds']
+        min_views = future_forecast['yhat'].min()
+        max_views_date = future_forecast.loc[future_forecast['yhat'].idxmax()]['ds']
+        max_views = future_forecast['yhat'].max()
+
+        st.write(f"The lowest predicted views are {min_views:.2f}, expected on {min_views_date.date()}.")
+        st.write(f"The highest predicted views are {max_views:.2f}, expected on {max_views_date.date()}.")
+    else:
+        st.write("No future predictions available.")
 except Exception as e:
-    st.error(f"Error generating insights: {e}")
-
-# Debugging forecast DataFrame
-st.subheader("Debugging Data")
-if st.checkbox("Show Forecast Data"):
-    st.write(forecast.head())
+    st.error(f"Error generating future insights: {e}")
