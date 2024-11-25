@@ -1,91 +1,76 @@
-import os
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 from prophet import Prophet
-from prophet.plot import plot_plotly
-import plotly.graph_objs as go
+import matplotlib.pyplot as plt
+from datetime import datetime
 
-# Ensure required libraries are installed
-os.system('pip install plotly==5.24.1')
-
-# Set page configuration
-st.set_page_config(page_title="Audience Engagement Predictor", layout="wide")
-
-# Load the dataset
-data_url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/DangerTV_Content.csv"
-data = pd.read_csv(data_url, encoding="ISO-8859-1")
-
-# Data preprocessing
-data.rename(columns={"Publish date": "ds", "Views": "y"}, inplace=True)
-data['ds'] = pd.to_datetime(data['ds'], errors='coerce')  # Convert to datetime and handle errors
-data = data.dropna(subset=['ds', 'y'])  # Drop rows with NaN in 'ds' or 'y'
-
-# Sidebar options
-st.sidebar.header("Prediction Settings")
-periods_input = st.sidebar.number_input(
-    "Number of days to predict:",
-    min_value=30,
-    max_value=365,
-    value=90,
-    step=10
-)
-
-# Main title
+# File upload section
 st.title("Audience Engagement Predictor")
-st.markdown("Use historical data to predict future audience engagement metrics.")
+uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
 
-# Show historical data
-st.subheader("Historical Data")
-fig, ax = plt.subplots(figsize=(10, 5))
-ax.plot(data['ds'], data['y'], label='Views')
-ax.set_title("Historical Views Over Time")
-ax.set_xlabel("Date")
-ax.set_ylabel("Views")
-ax.legend()
-st.pyplot(fig)
+if uploaded_file:
+    # Read the dataset
+    data = pd.read_csv(uploaded_file)
+    
+    # Display raw data
+    st.subheader("Raw Data")
+    st.write(data.head())
 
-# Prophet model fitting
-st.subheader("Prophet Model and Forecasting")
-with st.spinner("Training the model..."):
+    # Data preprocessing
+    st.subheader("Data Preprocessing")
+    try:
+        # Renaming columns to match Prophet requirements
+        data.rename(columns={"Video publish time": "ds", "Views": "y"}, inplace=True)
+        
+        # Convert 'ds' column to datetime
+        data['ds'] = pd.to_datetime(data['ds'], errors='coerce')
+        
+        # Drop rows with missing 'ds' or 'y'
+        data = data.dropna(subset=['ds', 'y'])
+        
+        # Ensure 'y' is numeric
+        data['y'] = pd.to_numeric(data['y'], errors='coerce')
+        
+        # Drop rows where 'y' is still NaN
+        data = data.dropna(subset=['y'])
+        
+        st.write("Processed Data")
+        st.write(data.head())
+    except KeyError as e:
+        st.error(f"Key error: {e}. Please ensure your dataset contains the required columns.")
+
+    # Sidebar for prediction period
+    st.sidebar.subheader("Prediction Settings")
+    prediction_period = st.sidebar.number_input("Prediction period (days)", min_value=1, max_value=365, value=30)
+
+    # Prophet model setup
+    st.subheader("Prophet Model")
     model = Prophet(yearly_seasonality=True, daily_seasonality=False)
-    model.fit(data[['ds', 'y']])
-
-# Forecast future values
-future = model.make_future_dataframe(periods=int(periods_input))
-forecast = model.predict(future)
-
-# Replace negative predictions with zero
-forecast['yhat'] = forecast['yhat'].clip(lower=0)
-
-# Display forecast data
-st.subheader("Forecast Results")
-st.write(f"Predictions for the next {periods_input} days:")
-st.write(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(periods_input))
-
-# Plot forecast
-st.subheader("Forecasted Views Over Time")
-fig1 = plot_plotly(model, forecast)
-st.plotly_chart(fig1, use_container_width=True)
-
-# Key insights
-st.subheader("Key Insights")
-lowest_pred = forecast.loc[forecast['yhat'].idxmin()]
-highest_pred = forecast.loc[forecast['yhat'].idxmax()]
-
-st.markdown(f"- The **lowest predicted views** are **{lowest_pred['yhat']:.0f}** on **{lowest_pred['ds'].date()}**.")
-st.markdown(f"- The **highest predicted views** are **{highest_pred['yhat']:.0f}** on **{highest_pred['ds'].date()}**.")
-
-# Highlight trends
-st.subheader("Future Trends")
-fig2 = go.Figure()
-fig2.add_trace(go.Scatter(
-    x=forecast['ds'], y=forecast['yhat'], mode='lines', name='Predicted Views'
-))
-fig2.update_layout(
-    title="Predicted Views Over Time",
-    xaxis_title="Date",
-    yaxis_title="Views",
-    showlegend=True
-)
-st.plotly_chart(fig2, use_container_width=True)
+    
+    try:
+        # Fit the model
+        model.fit(data[['ds', 'y']])
+        
+        # Create a future dataframe
+        future = model.make_future_dataframe(periods=prediction_period)
+        
+        # Make predictions
+        forecast = model.predict(future)
+        
+        # Display forecast data
+        st.subheader("Forecast Data")
+        st.write(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail())
+        
+        # Plot the forecast
+        st.subheader("Forecast Plot")
+        fig1 = model.plot(forecast)
+        st.pyplot(fig1)
+        
+        # Plot components
+        st.subheader("Forecast Components")
+        fig2 = model.plot_components(forecast)
+        st.pyplot(fig2)
+    except Exception as e:
+        st.error(f"Error in forecasting: {e}")
+else:
+    st.info("Please upload a CSV file to start.")
