@@ -1,9 +1,7 @@
 import pandas as pd
 import streamlit as st
 from prophet import Prophet
-from prophet.plot import plot_components_plotly
 import matplotlib.pyplot as plt
-from io import BytesIO
 
 # Title and Description
 st.title("Audience Engagement Predictor")
@@ -57,7 +55,8 @@ except Exception as e:
 # Forecast plot
 st.subheader("Forecasted Views Over Time")
 try:
-    fig1 = model.plot(forecast)
+    fig1, ax1 = plt.subplots(figsize=(10, 6))
+    model.plot(forecast, ax=ax1)
     st.pyplot(fig1)
 except Exception as e:
     st.error(f"Error generating forecast plot: {e}")
@@ -65,18 +64,14 @@ except Exception as e:
 # Components plot
 st.subheader("Forecast Components")
 try:
-    fig2 = model.plot_components(forecast)
+    fig2, ax2 = plt.subplots(figsize=(10, 6))
+    model.plot_components(forecast, ax=ax2)
     st.pyplot(fig2)
 except Exception as e:
     st.error(f"Error generating components plot: {e}")
 
-# Debugging: Display changepoint trends without `add_changepoints_to_plot`
-st.subheader("Changepoint Analysis")
-try:
-    fig3 = model.plot(forecast)
-    st.pyplot(fig3)
-except Exception as e:
-    st.error(f"Error generating changepoint analysis: {e}")
+# Clamp negative predictions to zero
+forecast['yhat'] = forecast['yhat'].apply(lambda x: max(x, 0))
 
 # Insights from forecast
 st.subheader("Insights from Forecast")
