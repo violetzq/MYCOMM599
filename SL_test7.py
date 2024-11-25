@@ -11,71 +11,58 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from prophet import Prophet
+from prophet.plot import plot_plotly
+import numpy as np
 
 # Set Streamlit page configuration
 st.set_page_config(page_title="Audience Engagement Predictor", layout="wide")
 
-# Load your dataset from GitHub
-@st.cache
-def load_data():
-    data_url = 'https://raw.githubusercontent.com/violetzq/MYCOMM599/main/DangerTV_Content.csv'
-    data = pd.read_csv(data_url, encoding='ISO-8859-1')
-    return data
-
-data = load_data()
+# Load dataset from GitHub
+data_url = 'https://raw.githubusercontent.com/violetzq/MYCOMM599/main/DangerTV_Content.csv'
+data = pd.read_csv(data_url, encoding='ISO-8859-1')
 
 # Preprocess data
-data['Video publish time'] = pd.to_datetime(data['Video publish time'], errors='coerce')
-data = data.dropna(subset=['Video publish time', 'Views', 'Watch time (hours)', 'Impressions click-through rate (%)'])
-data['Views'] = pd.to_numeric(data['Views'], errors='coerce')
-data['Watch time (hours)'] = pd.to_numeric(data['Watch time (hours)'], errors='coerce')
-data['Impressions click-through rate (%)'] = pd.to_numeric(data['Impressions click-through rate (%)'], errors='coerce')
+data['Video publish time'] = pd.to_datetime(data['Video publish time'])
+data = data.rename(columns={'Video publish time': 'ds', 'Views': 'y'})
 
-# Sidebar filter
-st.sidebar.header("Prediction Settings")
-metric = st.sidebar.selectbox("Select Engagement Metric to Predict", options=["Views", "Watch time (hours)", "Impressions click-through rate (%)"])
-future_periods = st.sidebar.slider("Select Number of Future Days to Predict", min_value=7, max_value=365, value=30)
+# Handle missing or negative values in 'y'
+data = data.dropna(subset=['y'])
+data = data[data['y'] >= 0]  # Keep only non-negative values
 
-# Prepare data for Prophet
+# Train Prophet model
 st.title("Audience Engagement Predictor")
-st.subheader(f"Predicting Future {metric}")
+st.markdown("Use historical data to predict future audience engagement metrics.")
+model = Prophet(yearly_seasonality=True, daily_seasonality=False)
+model.fit(data[['ds', 'y']])
 
-df_metric = data[['Video publish time', metric]].rename(columns={'Video publish time': 'ds', metric: 'y'})
-
-# Train the Prophet model
-with st.spinner("Training the model..."):
-    model = Prophet()
-    model.fit(df_metric)
-
-# Create future dataframe
-future = model.make_future_dataframe(periods=future_periods)
+# Forecast future values
+future = model.make_future_dataframe(periods=365)
 forecast = model.predict(future)
 
-# Visualize predictions
-st.subheader("Prediction Results")
-st.write(f"Predicted {metric} for the next {future_periods} days:")
-st.line_chart(forecast[['ds', 'yhat']].set_index('ds'))
+# Clamp negative predictions to zero
+forecast['yhat'] = forecast['yhat'].clip(lower=0)
+forecast['yhat_lower'] = forecast['yhat_lower'].clip(lower=0)
+forecast['yhat_upper'] = forecast['yhat_upper'].clip(lower=0)
 
-# Show trend components
-st.subheader("Trend Components")
-st.write("Below are the trend components identified by the model:")
-fig = model.plot_components(forecast)
-st.pyplot(fig)
+# Plot predictions
+st.subheader("Forecasted Views Over Time")
+fig1 = plot_plotly(model, forecast)
+st.plotly_chart(fig1, use_container_width=True)
 
-# Download the forecast data
-st.subheader("Download Forecast Data")
-csv = forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].rename(columns={
-    'ds': 'Date',
-    'yhat': f"Predicted {metric}",
-    'yhat_lower': f"Lower Bound {metric}",
-    'yhat_upper': f"Upper Bound {metric}"
-}).to_csv(index=False)
-st.download_button("Download Forecast Data as CSV", data=csv, file_name="forecast.csv", mime="text/csv")
+# Key Insights
+st.subheader("Key Insights")
+highest_prediction = forecast[['ds', 'yhat']].sort_values(by='yhat', ascending=False).iloc[0]
+lowest_prediction = forecast[['ds', 'yhat']].sort_values(by='yhat', ascending=True).iloc[0]
 
-# Insights
-st.subheader("Insights from Predictions")
-st.markdown(f"""
-- The predicted average {metric} over the next {future_periods} days is **{forecast['yhat'].mean():.2f}**.
-- The highest predicted {metric} is **{forecast['yhat'].max():.2f}**, expected on **{forecast.loc[forecast['yhat'].idxmax(), 'ds'].date()}**.
-- The lowest predicted {metric} is **{forecast['yhat'].min():.2f}**, expected on **{forecast.loc[forecast['yhat'].idxmin(), 'ds'].date()}**.
-""")
+st.markdown(f"- The **highest predicted Views** is **{highest_prediction['yhat']:.2f}**, expected on **{highest_prediction['ds'].strftime('%Y-%m-%d')}**.")
+st.markdown(f"- The **lowest predicted Views** is **{lowest_prediction['yhat']:.2f}**, expected on **{lowest_prediction['ds'].strftime('%Y-%m-%d')}**.")
+
+# Visualize trends
+st.subheader("Components of the Forecast")
+fig2 = model.plot_components(forecast)
+st.pyplot(fig2)
+
+# Optional: Show raw data
+st.subheader("Raw Forecast Data")
+if st.checkbox("Show Forecast Data"):
+    st.write(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']])
