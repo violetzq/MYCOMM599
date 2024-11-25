@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from prophet import Prophet
 from prophet.plot import plot_plotly
+import plotly.graph_objects as go
 
 # Set Streamlit page configuration
 st.set_page_config(page_title="Audience Engagement Predictor", layout="wide")
