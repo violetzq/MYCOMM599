@@ -1,5 +1,5 @@
-streamlit
-pandas
-matplotlib
-prophet
-plotly
+streamlit==1.40.1
+pandas==2.2.3
+matplotlib==3.9.2
+prophet==1.1.6
+plotly==5.24.1
