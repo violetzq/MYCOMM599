@@ -93,9 +93,12 @@ try:
     today = datetime.today()
 
     # Filter forecast for future dates only
-    future_forecast = forecast[forecast['ds'] >= pd.Timestamp(today)]
+    future_forecast = forecast[forecast['ds'] >= pd.Timestamp(today.date())]
 
-    if not future_forecast.empty:
+    if future_forecast.empty:
+        st.write("No future predictions found. Check the date range in the forecast data.")
+        st.write(f"Forecast start: {forecast['ds'].min()}, Forecast end: {forecast['ds'].max()}")
+    else:
         # Get the lowest and highest predicted views for future dates
         min_views_date = future_forecast.loc[future_forecast['yhat'].idxmin()]['ds']
         min_views = future_forecast['yhat'].min()
@@ -104,7 +107,5 @@ try:
 
         st.write(f"The lowest predicted views are {min_views:.2f}, expected on {min_views_date.date()}.")
         st.write(f"The highest predicted views are {max_views:.2f}, expected on {max_views_date.date()}.")
-    else:
-        st.write("No future predictions available.")
 except Exception as e:
     st.error(f"Error generating future insights: {e}")
