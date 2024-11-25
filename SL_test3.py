@@ -1,12 +1,11 @@
 import pandas as pd
-import numpy as np
 import streamlit as st
-import seaborn as sns
+from prophet import Prophet
 import matplotlib.pyplot as plt
 
 # Title and Description
-st.title("YouTube Programming Strategy Dashboard")
-st.markdown("Analyze your YouTube performance data and get actionable programming insights.")
+st.title("Audience Engagement Predictor")
+st.markdown("Analyze historical data and predict audience engagement.")
 
 # Load Dataset
 @st.cache_data
@@ -16,111 +15,113 @@ def load_data():
 
 try:
     data = load_data()
-    # Ensure required columns are present
-    if "Video publish time" not in data.columns or "Views" not in data.columns:
-        st.error("Required columns are missing from the dataset.")
-        st.stop()
-    # Preprocess data
-    data["Video publish time"] = pd.to_datetime(data["Video publish time"], errors="coerce")
-    data["day_of_week"] = data["Video publish time"].dt.day_name()
-    data["hour_of_day"] = data["Video publish time"].dt.hour
 except Exception as e:
-    st.error(f"Error loading or processing data: {e}")
+    st.error(f"Error loading data: {e}")
     st.stop()
 
-# Sidebar Filters
-st.sidebar.header("Filters")
-selected_day = st.sidebar.multiselect(
-    "Select Day(s) of the Week", options=data["day_of_week"].unique(), default=data["day_of_week"].unique()
-)
-selected_hours = st.sidebar.slider("Select Hour Range", 0, 23, (0, 23))
+# Data preprocessing
+try:
+    # Ensure required columns are present
+    required_columns = ["Video publish time", "Views", "Average view duration"]
+    missing_columns = [col for col in required_columns if col not in data.columns]
+    if missing_columns:
+        st.error(f"Missing required columns: {', '.join(missing_columns)}")
+        st.stop()
 
-# Filter Data
-filtered_data = data[
-    (data["day_of_week"].isin(selected_day)) & (data["hour_of_day"].between(selected_hours[0], selected_hours[1]))
-]
+    # Rename columns for compatibility with Prophet
+    data.rename(columns={"Video publish time": "ds", "Views": "y"}, inplace=True)
+    data['ds'] = pd.to_datetime(data['ds'], errors='coerce')  # Convert to datetime
+    data['y'] = pd.to_numeric(data['y'], errors='coerce')  # Ensure 'y' is numeric
+    data = data.dropna(subset=['ds', 'y'])  # Drop rows with NaN in 'ds' or 'y'
 
-# 1. Analyze Peak Viewing Times
-st.subheader("1. Analyze Peak Viewing Times")
-st.markdown("Identify trends in when viewers engage most actively with the content.")
+    # Ensure 'Average view duration' is numeric
+    data["Average view duration"] = pd.to_numeric(data["Average view duration"], errors='coerce')
+    data = data.dropna(subset=["Average view duration"])  # Drop rows with invalid values
+except Exception as e:
+    st.error(f"Error processing data: {e}")
+    st.stop()
 
-# Heatmap of Views by Day and Hour
-views_heatmap = data.pivot_table(
-    index="day_of_week", columns="hour_of_day", values="Views", aggfunc="mean"
-).reindex(index=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
-
-st.write("**Average Views Heatmap**")
-fig, ax = plt.subplots(figsize=(12, 6))
-sns.heatmap(views_heatmap, cmap="coolwarm", annot=True, fmt=".0f", ax=ax)
-st.pyplot(fig)
-
-# Insights
-st.write("**Insights:**")
-st.write(
-    "- Peak viewing hours can be identified from the heatmap. Consider posting during hours with higher engagement."
-    "\n- Adjust scheduling to avoid low-engagement periods."
+# Sidebar options
+st.sidebar.subheader("Prediction Settings")
+periods_input = st.sidebar.number_input(
+    "How many future days would you like to predict?", min_value=1, max_value=730, value=365
 )
 
-# 2. Content Length Analysis
-st.subheader("2. Content Length Analysis")
-if "Average view duration" in data.columns:
-    st.markdown("Evaluate viewer retention to determine the ideal video length for engagement.")
-    content_length_analysis = data.groupby("Video publish time")["Average view duration"].mean()
+# Display historical data
+st.subheader("Historical Data")
+st.write(data.head())
+
+# Plot historical views over time
+st.subheader("Historical Views Over Time")
+try:
+    st.line_chart(data.set_index('ds')['y'])
+except Exception as e:
+    st.error(f"Error plotting historical data: {e}")
+
+# Model training and prediction
+model = Prophet(yearly_seasonality=True, daily_seasonality=False)
+try:
+    model.fit(data[['ds', 'y']])
+    future = model.make_future_dataframe(periods=periods_input, freq='D')
+    forecast = model.predict(future)
+
+    # Clamp negative predictions to zero
+    forecast['yhat'] = forecast['yhat'].apply(lambda x: max(x, 0))
+
+    st.subheader("Forecasted Data")
+    st.write(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail())
+except Exception as e:
+    st.error(f"Error during modeling: {e}")
+    st.stop()
+
+# Forecast plot
+st.subheader("Forecasted Views Over Time")
+try:
+    fig1, ax1 = plt.subplots(figsize=(10, 6))
+    model.plot(forecast, ax=ax1)
+    st.pyplot(fig1)
+except Exception as e:
+    st.error(f"Error generating forecast plot: {e}")
+
+# Components plot
+st.subheader("Forecast Components")
+try:
+    fig2 = model.plot_components(forecast)
+    st.pyplot(fig2)
+except Exception as e:
+    st.error(f"Error generating components plot: {e}")
+
+# Insights from forecast
+from datetime import datetime
+
+st.subheader("Insights from Future Forecast")
+try:
+    # Get today's date
+    today = datetime.today()
+
+    # Filter forecast for future dates only
+    future_forecast = forecast[forecast['ds'] >= pd.Timestamp(today.date())]
+
+    if future_forecast.empty:
+        st.write("No future predictions found. Check the date range in the forecast data.")
+        st.write(f"Forecast start: {forecast['ds'].min()}, Forecast end: {forecast['ds'].max()}")
+    else:
+        # Get the lowest and highest predicted views for future dates
+        min_views_date = future_forecast.loc[future_forecast['yhat'].idxmin()]['ds']
+        min_views = future_forecast['yhat'].min()
+        max_views_date = future_forecast.loc[future_forecast['yhat'].idxmax()]['ds']
+        max_views = future_forecast['yhat'].max()
+
+        st.write(f"The lowest predicted views are {min_views:.2f}, expected on {min_views_date.date()}.")
+        st.write(f"The highest predicted views are {max_views:.2f}, expected on {max_views_date.date()}.")
+except Exception as e:
+    st.error(f"Error generating future insights: {e}")
+
+# Content Length Analysis
+st.subheader("Content Length Analysis")
+try:
+    content_length_analysis = data.groupby(data['ds'].dt.date)["Average view duration"].mean()
     st.line_chart(content_length_analysis)
-
-    st.write("**Insights:**")
-    st.write("- Identify whether shorter or longer videos retain viewers better.")
-    st.write("- Suggest adjustments to content length based on average view duration trends.")
-
-# 3. CTR and Thumbnail Optimization
-st.subheader("3. CTR and Thumbnail Optimization")
-if "Impressions click-through rate (%)" in data.columns:
-    st.markdown("Analyze videos with high CTR to evaluate their titles, thumbnails, and descriptions.")
-    top_ctr_videos = data.sort_values("Impressions click-through rate (%)", ascending=False).head(10)
-    st.write("**Top 10 Videos with Highest CTR**")
-    st.write(top_ctr_videos[["Video title", "Impressions click-through rate (%)", "Views"]])
-
-    st.write("**Insights:**")
-    st.write("- Analyze the thumbnails, titles, and descriptions of these videos to identify what works best.")
-    st.write("- Use these findings to optimize future content.")
-
-# 4. Optimal Scheduling Recommendations
-st.subheader("4. Optimal Scheduling Recommendations")
-optimal_schedule = views_heatmap.stack().reset_index()
-optimal_schedule.columns = ["Day", "Hour", "Average Views"]
-optimal_schedule = optimal_schedule.sort_values(by="Average Views", ascending=False).head(5)
-st.write("**Recommended Posting Times**")
-st.write(optimal_schedule)
-
-st.write("**Insights:**")
-st.write("- Use the table to decide the best times for posting new videos.")
-
-# 5. Viewer Engagement Trends
-st.subheader("5. Viewer Engagement Trends")
-if "Watch time (hours)" in data.columns:
-    engagement_trends = data.groupby("day_of_week")["Watch time (hours)"].sum().reindex(
-        ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    )
-    st.bar_chart(engagement_trends)
-
-    st.write("**Insights:**")
-    st.write("- Identify days with the highest watch time and focus on publishing content on those days.")
-
-# 6. Cross-Promotion Opportunities
-st.subheader("6. Cross-Promotion Opportunities")
-if "Content" in data.columns:
-    content_performance = data.groupby("Content")["Views"].sum().sort_values(ascending=False)
-    st.bar_chart(content_performance)
-
-    st.write("**Insights:**")
-    st.write("- Identify series or playlists with high engagement for cross-promotion.")
-    st.write("- Use this data to prioritize high-performing categories.")
-
-# Experimentation Plan
-st.subheader("Experimentation Plan")
-st.write(
-    "Suggestions for testing new scheduling patterns, video formats, or cross-category content:"
-    "\n1. Experiment with posting videos at different peak hours."
-    "\n2. Test the impact of various thumbnail designs on CTR."
-    "\n3. Introduce new content categories and measure engagement."
-)
+    st.write("This chart shows the average view duration over time.")
+except Exception as e:
+    st.error(f"Error during content length analysis: {e}")
