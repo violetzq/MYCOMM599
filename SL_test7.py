@@ -1,82 +1,97 @@
 import pandas as pd
 import streamlit as st
 from prophet import Prophet
-from prophet.plot import plot_plotly, add_changepoints_to_plot
+from prophet.plot import plot_components_plotly
 import matplotlib.pyplot as plt
+from io import BytesIO
 
-# Load your data from GitHub
-url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/335eecad5c20fd988c8dc65408218972c1201db1/DangerTV_Content.csv"
-data = pd.read_csv(url)
+# Title and Description
+st.title("Audience Engagement Predictor")
+st.markdown("Use historical data to predict future audience engagement.")
+
+# Load Dataset
+@st.cache_data
+def load_data():
+    url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/DangerTV_Content.csv"
+    return pd.read_csv(url)
+
+try:
+    data = load_data()
+except Exception as e:
+    st.error(f"Error loading data: {e}")
 
 # Data preprocessing
-data.rename(columns={"Video publish time": "ds", "Views": "y"}, inplace=True)
-data['ds'] = pd.to_datetime(data['ds'], errors='coerce')  # Convert to datetime
-data = data.dropna(subset=['ds', 'y'])  # Drop rows with NaN in 'ds' or 'y'
+try:
+    data.rename(columns={"Video publish time": "ds", "Views": "y"}, inplace=True)
+    data['ds'] = pd.to_datetime(data['ds'], errors='coerce')  # Convert to datetime
+    data = data.dropna(subset=['ds', 'y'])  # Drop rows with NaN in 'ds' or 'y'
+    data['y'] = pd.to_numeric(data['y'], errors='coerce')  # Ensure 'y' is numeric
+    data = data.dropna(subset=['y'])  # Drop rows with NaN in 'y'
+except KeyError as e:
+    st.error(f"Column missing in dataset: {e}")
 
 # Sidebar options
-st.sidebar.header("Prediction Configuration")
-forecast_days = st.sidebar.slider("Select forecast period (days):", 30, 365, 90)
+st.sidebar.subheader("Prediction Settings")
+periods_input = st.sidebar.number_input(
+    "How many future days would you like to predict?", min_value=1, max_value=365, value=30
+)
 
-# Model training
-model = Prophet(yearly_seasonality=True, weekly_seasonality=True)
-model.fit(data[['ds', 'y']])
-
-# Forecast future values
-future = model.make_future_dataframe(periods=forecast_days)
-forecast = model.predict(future)
-
-# Visualize historical data
-st.title("Audience Engagement Predictor")
+# Display historical data
 st.subheader("Historical Data")
-fig, ax = plt.subplots()
-data.plot(x='ds', y='y', ax=ax, title="Historical Views Over Time")
-st.pyplot(fig)
+st.write(data.head())
 
-# Forecast Visualization
+# Plot historical data
+st.line_chart(data.set_index('ds')['y'])
+
+# Model training and prediction
+model = Prophet(yearly_seasonality=True, daily_seasonality=False)
+try:
+    model.fit(data[['ds', 'y']])
+    future = model.make_future_dataframe(periods=periods_input)
+    forecast = model.predict(future)
+    st.subheader("Forecasted Data")
+    st.write(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail())
+except Exception as e:
+    st.error(f"Error during modeling: {e}")
+
+# Forecast plot
 st.subheader("Forecasted Views Over Time")
-fig1 = plot_plotly(model, forecast)
-st.plotly_chart(fig1)
+try:
+    fig1 = model.plot(forecast)
+    st.pyplot(fig1)
+except Exception as e:
+    st.error(f"Error generating forecast plot: {e}")
 
-# Seasonal Components
-st.subheader("Seasonality Analysis")
-fig2 = model.plot_components(forecast)
-st.pyplot(fig2)
+# Components plot
+st.subheader("Forecast Components")
+try:
+    fig2 = model.plot_components(forecast)
+    st.pyplot(fig2)
+except Exception as e:
+    st.error(f"Error generating components plot: {e}")
 
-# Generate Insights
-st.subheader("Key Insights")
-# 1. Find the highest and lowest predicted values
-highest_prediction = forecast[['ds', 'yhat']].sort_values(by='yhat', ascending=False).iloc[0]
-lowest_prediction = forecast[['ds', 'yhat']].sort_values(by='yhat', ascending=True).iloc[0]
-
-st.markdown(f"**Highest Predicted Views:** {highest_prediction['yhat']:.2f} on {highest_prediction['ds'].date()}")
-st.markdown(f"**Lowest Predicted Views:** {lowest_prediction['yhat']:.2f} on {lowest_prediction['ds'].date()}")
-
-# 2. Analyze seasonality contributions
-weekly_seasonality = forecast[['ds', 'weekly']]
-yearly_seasonality = forecast[['ds', 'yearly']]
-
-# Day with the highest weekly seasonality
-highest_weekly = weekly_seasonality.sort_values(by='weekly', ascending=False).iloc[0]
-lowest_weekly = weekly_seasonality.sort_values(by='weekly', ascending=True).iloc[0]
-
-st.markdown(f"**Day with highest weekly contribution:** {highest_weekly['ds'].date()} ({highest_weekly['weekly']:.2f})")
-st.markdown(f"**Day with lowest weekly contribution:** {lowest_weekly['ds'].date()} ({lowest_weekly['weekly']:.2f})")
-
-# Month with the highest yearly contribution
-highest_yearly = yearly_seasonality.sort_values(by='yearly', ascending=False).iloc[0]
-lowest_yearly = yearly_seasonality.sort_values(by='yearly', ascending=True).iloc[0]
-
-st.markdown(f"**Month with highest yearly contribution:** {highest_yearly['ds'].strftime('%B')} ({highest_yearly['yearly']:.2f})")
-st.markdown(f"**Month with lowest yearly contribution:** {lowest_yearly['ds'].strftime('%B')} ({lowest_yearly['yearly']:.2f})")
-
-# 3. General trend
-st.markdown("**General Observations:**")
-if forecast['yhat'].iloc[-1] > data['y'].mean():
-    st.markdown("- Future views are expected to increase compared to historical average.")
-else:
-    st.markdown("- Future views are expected to decrease compared to historical average.")
-
-# Highlight anomalies
-changepoints_fig = add_changepoints_to_plot(fig, model, forecast)
+# Debugging: Display changepoint trends without `add_changepoints_to_plot`
 st.subheader("Changepoint Analysis")
-st.pyplot(changepoints_fig)
+try:
+    fig3 = model.plot(forecast)
+    st.pyplot(fig3)
+except Exception as e:
+    st.error(f"Error generating changepoint analysis: {e}")
+
+# Insights from forecast
+st.subheader("Insights from Forecast")
+try:
+    min_views_date = forecast.loc[forecast['yhat'].idxmin()]['ds']
+    min_views = forecast['yhat'].min()
+    max_views_date = forecast.loc[forecast['yhat'].idxmax()]['ds']
+    max_views = forecast['yhat'].max()
+
+    st.write(f"The lowest predicted views are {min_views:.2f}, expected on {min_views_date.date()}.")
+    st.write(f"The highest predicted views are {max_views:.2f}, expected on {max_views_date.date()}.")
+except Exception as e:
+    st.error(f"Error generating insights: {e}")
+
+# Debugging forecast DataFrame
+st.subheader("Debugging Data")
+if st.checkbox("Show Forecast Data"):
+    st.write(forecast.head())
