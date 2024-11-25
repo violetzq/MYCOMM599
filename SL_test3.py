@@ -17,13 +17,18 @@ def load_data():
 try:
     data = load_data()
     # Ensure required columns are present
-    if "Video publish time" not in data.columns or "Views" not in data.columns:
-        st.error("Required columns are missing from the dataset.")
+    required_columns = ["Video publish time", "Views"]
+    missing_columns = [col for col in required_columns if col not in data.columns]
+    if missing_columns:
+        st.error(f"Missing required columns: {', '.join(missing_columns)}")
         st.stop()
+
     # Preprocess data
     data["Video publish time"] = pd.to_datetime(data["Video publish time"], errors="coerce")
     data["day_of_week"] = data["Video publish time"].dt.day_name()
     data["hour_of_day"] = data["Video publish time"].dt.hour
+    data["Views"] = pd.to_numeric(data["Views"], errors="coerce")
+    data = data.dropna(subset=["Video publish time", "Views"])
 except Exception as e:
     st.error(f"Error loading or processing data: {e}")
     st.stop()
@@ -54,18 +59,15 @@ fig, ax = plt.subplots(figsize=(12, 6))
 sns.heatmap(views_heatmap, cmap="coolwarm", annot=True, fmt=".0f", ax=ax)
 st.pyplot(fig)
 
-# Insights
 st.write("**Insights:**")
-st.write(
-    "- Peak viewing hours can be identified from the heatmap. Consider posting during hours with higher engagement."
-    "\n- Adjust scheduling to avoid low-engagement periods."
-)
+st.write("- Peak viewing hours can be identified from the heatmap. Consider posting during hours with higher engagement.")
+st.write("- Adjust scheduling to avoid low-engagement periods.")
 
 # 2. Content Length Analysis
 st.subheader("2. Content Length Analysis")
 if "Average view duration" in data.columns:
     st.markdown("Evaluate viewer retention to determine the ideal video length for engagement.")
-    content_length_analysis = data.groupby("Video publish time")["Average view duration"].mean()
+    content_length_analysis = data["Average view duration"].dropna()
     st.line_chart(content_length_analysis)
 
     st.write("**Insights:**")
