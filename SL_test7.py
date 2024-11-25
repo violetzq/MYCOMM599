@@ -16,7 +16,9 @@ data = pd.read_csv(data_url, encoding='ISO-8859-1')
 # Preprocess the data
 st.header("Data Preprocessing")
 if 'Video publish time' in data.columns:
+    # Rename columns to match Prophet requirements
     data.rename(columns={'Video publish time': 'ds', 'Views': 'y'}, inplace=True)
+    # Convert 'ds' column to datetime and drop invalid rows
     data['ds'] = pd.to_datetime(data['ds'], errors='coerce')
     data = data.dropna(subset=['ds', 'y'])  # Remove rows with NaN in 'ds' or 'y'
     st.write(f"Data after cleaning: {data.shape[0]} rows")
