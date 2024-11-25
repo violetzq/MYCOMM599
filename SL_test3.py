@@ -44,26 +44,29 @@ filtered_data = data[
 st.subheader("1. Analyze Peak Viewing Times")
 st.markdown("Identify trends in when viewers engage most actively with the content.")
 
-# Heatmap of Views by Day and Hour
+# Bar chart of Views by Day of the Week
 try:
-    views_heatmap = data.pivot_table(
-        index="day_of_week", columns="hour_of_day", values="Views", aggfunc="mean"
-    ).reindex(index=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
+    # Calculate average views by day of the week
+    views_by_day = data.groupby("day_of_week")["Views"].mean().reindex(
+        ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    )
 
-    st.write("**Average Views Heatmap**")
-    fig, ax = plt.subplots(figsize=(14, 8))
-    sns.heatmap(views_heatmap, cmap="coolwarm", annot=True, fmt=".0f", ax=ax, linewidths=.5)
-    ax.set_title("Average Views by Day and Hour")
+    st.write("**Average Views by Day of the Week**")
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.barplot(x=views_by_day.index, y=views_by_day.values, palette="coolwarm", ax=ax)
+    ax.set_title("Average Views by Day of the Week")
+    ax.set_ylabel("Average Views")
+    ax.set_xlabel("Day of the Week")
     st.pyplot(fig)
 except Exception as e:
-    st.error(f"Error generating heatmap: {e}")
+    st.error(f"Error generating day-of-week insights: {e}")
 
 # Insights
 st.write("**Insights:**")
 st.write(
-    "- Identify peak days and times from the heatmap."
-    "\n- Schedule content posting during high-engagement hours."
-    "\n- Avoid low-engagement periods."
+    "- Identify peak days from the bar chart."
+    "\n- Schedule content posting during high-engagement days."
+    "\n- Avoid low-engagement days for better viewer traction."
 )
 
 # 2. Content Length Analysis
