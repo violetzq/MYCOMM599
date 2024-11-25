@@ -17,16 +17,23 @@ try:
     data = load_data()
 except Exception as e:
     st.error(f"Error loading data: {e}")
+    st.stop()
 
 # Data preprocessing
 try:
+    # Ensure required columns are present
+    if "Video publish time" not in data.columns or "Views" not in data.columns:
+        st.error("Required columns are missing from the dataset.")
+        st.stop()
+
+    # Renaming and cleaning data
     data.rename(columns={"Video publish time": "ds", "Views": "y"}, inplace=True)
     data['ds'] = pd.to_datetime(data['ds'], errors='coerce')  # Convert to datetime
-    data = data.dropna(subset=['ds', 'y'])  # Drop rows with NaN in 'ds' or 'y'
     data['y'] = pd.to_numeric(data['y'], errors='coerce')  # Ensure 'y' is numeric
-    data = data.dropna(subset=['y'])  # Drop rows with NaN in 'y'
-except KeyError as e:
-    st.error(f"Column missing in dataset: {e}")
+    data = data.dropna(subset=['ds', 'y'])  # Drop rows with NaN in 'ds' or 'y'
+except Exception as e:
+    st.error(f"Error processing data: {e}")
+    st.stop()
 
 # Sidebar options
 st.sidebar.subheader("Prediction Settings")
@@ -39,7 +46,11 @@ st.subheader("Historical Data")
 st.write(data.head())
 
 # Plot historical data
-st.line_chart(data.set_index('ds')['y'])
+st.subheader("Historical Views Over Time")
+try:
+    st.line_chart(data.set_index('ds')['y'])
+except Exception as e:
+    st.error(f"Error plotting historical data: {e}")
 
 # Model training and prediction
 model = Prophet(yearly_seasonality=True, daily_seasonality=False)
@@ -51,6 +62,10 @@ try:
     st.write(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail())
 except Exception as e:
     st.error(f"Error during modeling: {e}")
+    st.stop()
+
+# Clamp negative predictions to zero
+forecast['yhat'] = forecast['yhat'].apply(lambda x: max(x, 0))
 
 # Forecast plot
 st.subheader("Forecasted Views Over Time")
@@ -69,9 +84,6 @@ try:
     st.pyplot(fig2)
 except Exception as e:
     st.error(f"Error generating components plot: {e}")
-
-# Clamp negative predictions to zero
-forecast['yhat'] = forecast['yhat'].apply(lambda x: max(x, 0))
 
 # Insights from forecast
 st.subheader("Insights from Forecast")
