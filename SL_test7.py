@@ -2,70 +2,61 @@ import streamlit as st
 import pandas as pd
 from prophet import Prophet
 from prophet.plot import plot_plotly
+import plotly.graph_objs as go
 import matplotlib.pyplot as plt
 
-# Load Dataset
-data_url = 'https://raw.githubusercontent.com/violetzq/MYCOMM599/main/DangerTV_Content.csv'
+# Set Streamlit page configuration
+st.set_page_config(page_title="Audience Engagement Predictor", layout="wide")
+
+# Load your dataset
+st.title("Audience Engagement Predictor")
+data_url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/DangerTV_Content.csv"
 data = pd.read_csv(data_url, encoding='ISO-8859-1')
 
-# Prepare Data for Prophet
-# Ensure date column is in datetime format and rename for Prophet compatibility
-data['Video publish time'] = pd.to_datetime(data['Video publish time'], errors='coerce')
-data = data.rename(columns={'Video publish time': 'ds', 'Views': 'y'})
-data = data[['ds', 'y']].dropna()  # Keep only required columns and drop missing values
+# Preprocess the data
+st.header("Data Preprocessing")
+if 'Video publish time' in data.columns:
+    data.rename(columns={'Video publish time': 'ds', 'Views': 'y'}, inplace=True)
+    data['ds'] = pd.to_datetime(data['ds'], errors='coerce')
+    data = data.dropna(subset=['ds', 'y'])  # Remove rows with NaN in 'ds' or 'y'
+    st.write(f"Data after cleaning: {data.shape[0]} rows")
+else:
+    st.error("The required columns 'Video publish time' and 'Views' are missing in the dataset!")
 
-# Streamlit App Setup
-st.title("Audience Engagement Predictor")
-st.markdown("Use historical data to predict future audience engagement metrics.")
+# Display historical data
+st.subheader("Historical Data")
+fig, ax = plt.subplots(figsize=(10, 6))
+ax.plot(data['ds'], data['y'], label='Historical Views')
+ax.set_title("Historical Views Over Time")
+ax.set_xlabel("Date")
+ax.set_ylabel("Views")
+ax.legend()
+st.pyplot(fig)
 
-# User Input for Prediction Periods
-st.sidebar.header("Forecast Settings")
-prediction_periods = st.sidebar.selectbox(
-    "Select number of days to forecast:",
-    options=[30, 90, 180, 365],
-    index=0
-)
-st.sidebar.markdown(f"Forecasting {prediction_periods} days into the future.")
+# Prophet model
+st.subheader("Forecast Audience Engagement")
+with st.sidebar:
+    st.header("Forecast Configuration")
+    prediction_period = st.slider("Select prediction period (days):", min_value=30, max_value=365, value=90, step=30)
 
-# Train Prophet Model
-model = Prophet(yearly_seasonality=True, weekly_seasonality=True, daily_seasonality=False)
-model.fit(data)
+model = Prophet(yearly_seasonality=True, daily_seasonality=False)
+model.fit(data[['ds', 'y']])
 
-# Create Future Dataframe
-future = model.make_future_dataframe(periods=prediction_periods)
+# Create future dataframe
+future = model.make_future_dataframe(periods=prediction_period)
 forecast = model.predict(future)
 
-# Clamp Predictions to Avoid Negative Values
-forecast['yhat'] = forecast['yhat'].clip(lower=0)
-forecast['yhat_lower'] = forecast['yhat_lower'].clip(lower=0)
-forecast['yhat_upper'] = forecast['yhat_upper'].clip(lower=0)
-
-# Visualize Predictions
+# Plot forecast
 st.subheader("Forecasted Views Over Time")
-fig1 = plot_plotly(model, forecast)
-st.plotly_chart(fig1, use_container_width=True)
+fig_forecast = plot_plotly(model, forecast)
+st.plotly_chart(fig_forecast, use_container_width=True)
 
-# Key Insights
+# Insights
 st.subheader("Key Insights")
-highest_prediction = forecast[['ds', 'yhat']].sort_values(by='yhat', ascending=False).iloc[0]
-lowest_prediction = forecast[['ds', 'yhat']].sort_values(by='yhat', ascending=True).iloc[0]
+max_predicted_views = forecast['yhat'].max()
+max_predicted_date = forecast.loc[forecast['yhat'].idxmax(), 'ds']
+min_predicted_views = max(0, forecast['yhat'].min())  # Clamp negative values to zero
+min_predicted_date = forecast.loc[forecast['yhat'].idxmin(), 'ds']
 
-st.markdown(f"- The **highest predicted Views** is **{highest_prediction['yhat']:.2f}**, expected on **{highest_prediction['ds'].strftime('%Y-%m-%d')}**.")
-st.markdown(f"- The **lowest predicted Views** is **{lowest_prediction['yhat']:.2f}**, expected on **{lowest_prediction['ds'].strftime('%Y-%m-%d')}**.")
-if lowest_prediction['yhat'] == 0:
-    st.markdown("- Investigate historical patterns leading to predicted zero engagement.")
-
-# Allow User to Explore Forecasted Data
-st.subheader("Explore Forecasted Data")
-forecast_table = forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']]
-st.dataframe(forecast_table)
-
-# Option to Download Forecast Data as CSV
-csv = forecast_table.to_csv(index=False)
-st.download_button(label="Download Forecast Data as CSV", data=csv, file_name="forecast_data.csv", mime="text/csv")
-
-# Historical Data Visualization
-st.subheader("Historical Data")
-fig2, ax = plt.subplots()
-data.plot(x='ds', y='y', kind='line', title='Historical Views Over Time', ax=ax)
-st.pyplot(fig2)
+st.markdown(f"- **Maximum predicted views:** {max_predicted_views:.0f} on {max_predicted_date.date()}")
+st.markdown(f"- **Minimum predicted views:** {min_predicted_views:.0f} on {min_predicted_date.date()}")
