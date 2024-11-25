@@ -87,8 +87,11 @@ except Exception as e:
 # Insights from forecast
 st.subheader("Insights from Forecast")
 try:
+    # Use unclamped 'yhat' for minimum insight
     min_views_date = forecast.loc[forecast['yhat'].idxmin()]['ds']
     min_views = forecast['yhat'].min()
+
+    # Use clamped 'yhat' for maximum insight
     max_views_date = forecast.loc[forecast['yhat'].idxmax()]['ds']
     max_views = forecast['yhat'].max()
 
