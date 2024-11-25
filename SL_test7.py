@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from prophet import Prophet
 import matplotlib.pyplot as plt
-from datetime import datetime
 
 # File upload section
 st.title("Audience Engagement Predictor")
@@ -19,21 +18,19 @@ if uploaded_file:
     # Data preprocessing
     st.subheader("Data Preprocessing")
     try:
-        # Renaming columns to match Prophet requirements
+        # Rename columns to match Prophet requirements
         data.rename(columns={"Video publish time": "ds", "Views": "y"}, inplace=True)
         
-        # Convert 'ds' column to datetime
+        # Convert 'ds' column to datetime format
         data['ds'] = pd.to_datetime(data['ds'], errors='coerce')
-        
-        # Drop rows with missing 'ds' or 'y'
-        data = data.dropna(subset=['ds', 'y'])
         
         # Ensure 'y' is numeric
         data['y'] = pd.to_numeric(data['y'], errors='coerce')
         
-        # Drop rows where 'y' is still NaN
-        data = data.dropna(subset=['y'])
+        # Drop rows with missing values in 'ds' or 'y'
+        data = data.dropna(subset=['ds', 'y'])
         
+        # Display processed data
         st.write("Processed Data")
         st.write(data.head())
     except KeyError as e:
