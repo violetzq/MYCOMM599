@@ -38,8 +38,9 @@ except Exception as e:
 # Sidebar options
 st.sidebar.subheader("Prediction Settings")
 periods_input = st.sidebar.number_input(
-    "How many future days would you like to predict?", min_value=1, max_value=365, value=30
+    "How many future days would you like to predict?", min_value=1, max_value=730, value=365
 )
+st.write(f"Future DataFrame start: {future['ds'].min()}, Future DataFrame end: {future['ds'].max()}")
 
 # Display historical data
 st.subheader("Historical Data")
@@ -56,8 +57,7 @@ except Exception as e:
 model = Prophet(yearly_seasonality=True, daily_seasonality=False)
 try:
     model.fit(data[['ds', 'y']])
-    future = model.make_future_dataframe(periods=periods_input)
-    forecast = model.predict(future)
+    future = model.make_future_dataframe(periods=periods_input, freq='D')
     st.subheader("Forecasted Data")
     st.write(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail())
 except Exception as e:
