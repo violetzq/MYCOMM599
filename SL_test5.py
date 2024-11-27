@@ -30,11 +30,11 @@ try:
 
     data.rename(columns={"Video publish time": "ds", "Views": "y"}, inplace=True)
     data['ds'] = pd.to_datetime(data['ds'], errors='coerce')
-    data['y'] = pd.to_numeric(data['y'], errors='coerce')
+    data['y'] = pd.to_numeric(data['y'], errors='coerce')  # Ensure Views is numeric
     data = data.dropna(subset=['ds', 'y'])
 
-    # Handle duplicate timestamps by aggregating (taking the mean for duplicates)
-    data = data.groupby('ds', as_index=False).mean()
+    # Handle duplicate timestamps by aggregating with the mean
+    data = data.groupby('ds', as_index=False).agg({'y': 'mean'})
 except Exception as e:
     st.error(f"Error processing data: {e}")
     st.stop()
