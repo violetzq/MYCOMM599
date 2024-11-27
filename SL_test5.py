@@ -32,6 +32,9 @@ try:
     data['ds'] = pd.to_datetime(data['ds'], errors='coerce')
     data['y'] = pd.to_numeric(data['y'], errors='coerce')
     data = data.dropna(subset=['ds', 'y'])
+
+    # Handle duplicate timestamps by aggregating (taking the mean for duplicates)
+    data = data.groupby('ds', as_index=False).mean()
 except Exception as e:
     st.error(f"Error processing data: {e}")
     st.stop()
@@ -77,10 +80,7 @@ try:
     test_forecast = forecast[forecast['ds'].isin(test_data['ds'])].set_index('ds')
     aligned_test_data = test_data.set_index('ds').reindex(test_forecast.index)
 
-    # Ensure alignment before calculating metrics
-    if len(aligned_test_data) != len(test_forecast):
-        st.warning("Mismatch between test data and forecast predictions. Adjusting...")
-
+    # Calculate evaluation metrics
     mae = mean_absolute_error(aligned_test_data['y'], test_forecast['yhat'])
     mse = mean_squared_error(aligned_test_data['y'], test_forecast['yhat'])
     rmse = np.sqrt(mse)
