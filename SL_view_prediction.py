@@ -2,13 +2,12 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 from prophet import Prophet
-from sklearn.metrics import mean_absolute_error, mean_squared_error
+from prophet.diagnostics import cross_validation, performance_metrics
 import matplotlib.pyplot as plt
-from datetime import datetime
 
 # Title and Description
-st.title("Audience Engagement Predictor with Model Evaluation")
-st.markdown("Use historical data to predict future audience engagement and evaluate model accuracy.")
+st.title("Audience Engagement Predictor")
+st.markdown("Use historical data to predict future audience engagement.")
 
 # Load Dataset
 @st.cache_data
@@ -30,22 +29,20 @@ try:
 
     data.rename(columns={"Video publish time": "ds", "Views": "y"}, inplace=True)
     data['ds'] = pd.to_datetime(data['ds'], errors='coerce')
-    data['y'] = pd.to_numeric(data['y'], errors='coerce')  # Ensure Views is numeric
+    data['y'] = pd.to_numeric(data['y'], errors='coerce')
     data = data.dropna(subset=['ds', 'y'])
 
-    # Handle duplicate timestamps by aggregating with the mean
-    data = data.groupby('ds', as_index=False).agg({'y': 'mean'})
+    # Remove outliers using the IQR method
+    Q1 = data['y'].quantile(0.25)
+    Q3 = data['y'].quantile(0.75)
+    IQR = Q3 - Q1
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+    data = data[(data['y'] >= lower_bound) & (data['y'] <= upper_bound)]
+
+    st.write("Outliers removed using IQR method.")
 except Exception as e:
     st.error(f"Error processing data: {e}")
-    st.stop()
-
-# Split data into train and test sets
-split_date = st.sidebar.date_input("Select Train/Test Split Date", datetime(2023, 1, 1))
-train_data = data[data['ds'] < pd.Timestamp(split_date)]
-test_data = data[data['ds'] >= pd.Timestamp(split_date)]
-
-if train_data.empty or test_data.empty:
-    st.error("Train or test dataset is empty. Adjust the split date.")
     st.stop()
 
 # Sidebar options
@@ -68,33 +65,16 @@ else:
     st.stop()
 
 # Model training and prediction
-model = Prophet(yearly_seasonality=True, daily_seasonality=False, changepoint_prior_scale=0.5)
-model.add_country_holidays(country_name='US')  # Add holiday effects
-
+model = Prophet(yearly_seasonality=True, weekly_seasonality=True, daily_seasonality=False)
 try:
-    model.fit(train_data[['ds', 'y']])
+    model.fit(data[['ds', 'y']])
     future = model.make_future_dataframe(periods=periods_input, freq='D')
     forecast = model.predict(future)
-    
-    # Align test_forecast with test_data
-    test_forecast = forecast[forecast['ds'].isin(test_data['ds'])].set_index('ds')
-    aligned_test_data = test_data.set_index('ds').reindex(test_forecast.index)
-
-    # Calculate evaluation metrics
-    mae = mean_absolute_error(aligned_test_data['y'], test_forecast['yhat'])
-    mse = mean_squared_error(aligned_test_data['y'], test_forecast['yhat'])
-    rmse = np.sqrt(mse)
-
-    st.subheader("Model Performance on Test Set")
-    st.write(f"Mean Absolute Error (MAE): {mae:.2f}")
-    st.write(f"Mean Squared Error (MSE): {mse:.2f}")
-    st.write(f"Root Mean Squared Error (RMSE): {rmse:.2f}")
-
     st.write(f"Future DataFrame start: {future['ds'].min()}, Future DataFrame end: {future['ds'].max()}")
     st.subheader("Forecasted Data")
     st.write(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail())
 except Exception as e:
-    st.error(f"Error during modeling or evaluation: {e}")
+    st.error(f"Error during future prediction: {e}")
     st.stop()
 
 # Clamp negative predictions to zero
@@ -116,6 +96,20 @@ try:
     st.pyplot(fig2)
 except Exception as e:
     st.error(f"Error generating components plot: {e}")
+
+# Cross-validation and performance metrics
+st.subheader("Model Performance Metrics")
+try:
+    df_cv = cross_validation(model, initial='730 days', period='180 days', horizon='365 days')
+    df_p = performance_metrics(df_cv)
+    st.write(df_p)
+
+    st.write("**Insights from Performance Metrics:**")
+    st.write("- MAE (Mean Absolute Error) gives the average magnitude of errors in the predictions.")
+    st.write("- RMSE (Root Mean Squared Error) is more sensitive to larger errors due to squaring.")
+    st.write("- Use these metrics to evaluate and improve the model.")
+except Exception as e:
+    st.error(f"Error during cross-validation: {e}")
 
 # Insights from forecast
 st.subheader("Insights from Future Forecast")
