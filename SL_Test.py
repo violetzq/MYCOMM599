@@ -1,90 +1,80 @@
 import pandas as pd
 import streamlit as st
-import seaborn as sns
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Title and Description
-st.title("Audience Demographics Analysis Dashboard")
-st.markdown("Analyze the audience demographics and extract actionable insights.")
+st.title("Audience Demographic Insights")
+st.markdown("Analyze audience demographics by age, gender, and geographic location.")
 
-# Load Dataset
+# Load Datasets
 @st.cache_data
-def load_data(url):
-    return pd.read_csv(url)
+def load_data():
+    age_data_url = "https://github.com/violetzq/MYCOMM599/blob/e5c370493167f24014feb88f6ab158e1dda1dad3/Viewer_age.csv?raw=true"
+    gender_data_url = "https://github.com/violetzq/MYCOMM599/blob/e5c370493167f24014feb88f6ab158e1dda1dad3/Viewer_gender.csv?raw=true"
+    city_data_url = "https://github.com/violetzq/MYCOMM599/blob/05a00ee4078e0b56c6cc6a433d7a3dba1d1e8942/Viewer_Cities.csv?raw=true"
+    age_data = pd.read_csv(age_data_url)
+    gender_data = pd.read_csv(gender_data_url)
+    city_data = pd.read_csv(city_data_url)
+    return age_data, gender_data, city_data
 
 try:
-    # Correct URLs
-    cities_data = load_data("https://raw.githubusercontent.com/violetzq/MYCOMM599/05a00ee4078e0b56c6cc6a433d7a3dba1d1e8942/Viewer_Cities.csv")
-    age_data = load_data("https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Viewer_age.csv")
-    gender_data = load_data("https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Viewer_gender.csv")
+    age_data, gender_data, city_data = load_data()
 except Exception as e:
     st.error(f"Error loading data: {e}")
     st.stop()
 
-# 1. Audience Demographics Overview
-st.subheader("1. Audience Demographics Overview")
-st.markdown("Understand the composition of your audience.")
-
-# 1.1 Age Distribution
-st.subheader("1.1 Age Distribution")
+# 1. Age Distribution
+st.subheader("1. Age Distribution")
 try:
-    if "Age Group" in age_data.columns and "Views" in age_data.columns:
-        age_chart = age_data.groupby("Age Group")[["Views"]].sum().sort_values(by="Views", ascending=False)
+    st.markdown("**Percentage of Views by Age Group**")
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.barplot(x="Viewer age", y="Views (%)", data=age_data, ax=ax)
+    ax.set_ylabel("Views (%)")
+    ax.set_xlabel("Age Group")
+    ax.set_title("Viewership by Age Group")
+    st.pyplot(fig)
 
-        # Bar chart
-        st.bar_chart(age_chart)
-
-        st.write("**Insights:**")
-        st.write("- Identify which age groups dominate the viewership.")
-        st.write("- Suggest content tailored to the interests of dominant age groups.")
-    else:
-        st.error("Age data does not have the required columns ('Age Group', 'Views').")
+    st.markdown("**Insights:**")
+    st.write("- Identify the age group that dominates the viewership.")
+    st.write("- Adjust programming to cater to high-engagement age groups.")
 except Exception as e:
-    st.error(f"Error processing age data: {e}")
+    st.error(f"Error in Age Distribution Analysis: {e}")
 
-# 1.2 Gender Distribution
-st.subheader("1.2 Gender Distribution")
+# 2. Gender Distribution
+st.subheader("2. Gender Distribution")
 try:
-    if "Gender" in gender_data.columns and "Views" in gender_data.columns:
-        gender_chart = gender_data.groupby("Gender")[["Views"]].sum()
+    st.markdown("**Percentage of Views by Gender**")
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.barplot(x="Viewer gender", y="Views (%)", data=gender_data, ax=ax)
+    ax.set_ylabel("Views (%)")
+    ax.set_xlabel("Gender")
+    ax.set_title("Viewership by Gender")
+    st.pyplot(fig)
 
-        # Pie chart
-        fig, ax = plt.subplots()
-        ax.pie(gender_chart["Views"], labels=gender_chart.index, autopct="%1.1f%%", startangle=90, colors=["#ff9999","#66b3ff"])
-        ax.set_title("Gender Distribution")
-        st.pyplot(fig)
-
-        st.write("**Insights:**")
-        st.write("- Understand the gender balance in the audience.")
-        st.write("- Suggest content strategies for engaging with underrepresented genders.")
-    else:
-        st.error("Gender data does not have the required columns ('Gender', 'Views').")
+    st.markdown("**Insights:**")
+    st.write("- Understand whether one gender dominates the viewership.")
+    st.write("- Tailor marketing and programming strategies accordingly.")
 except Exception as e:
-    st.error(f"Error processing gender data: {e}")
+    st.error(f"Error in Gender Distribution Analysis: {e}")
 
-# 1.3 Geographic Location
-st.subheader("1.3 Geographic Location")
+# 3. Geographic Location
+st.subheader("3. Geographic Location")
 try:
-    if "City" in cities_data.columns and "Views" in cities_data.columns:
-        city_chart = cities_data.groupby("City")[["Views"]].sum().sort_values(by="Views", ascending=False).head(10)
+    st.markdown("**Top Cities by Views**")
+    top_cities = city_data.sort_values("Views", ascending=False).head(10)
+    st.dataframe(top_cities)
 
-        # Bar chart
-        st.bar_chart(city_chart)
+    st.markdown("**City Viewership Distribution**")
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.barplot(y="City name", x="Views", data=top_cities, ax=ax)
+    ax.set_ylabel("City")
+    ax.set_xlabel("Total Views")
+    ax.set_title("Top Cities by Total Views")
+    st.pyplot(fig)
 
-        st.write("**Insights:**")
-        st.write("- Identify top-performing cities based on viewership.")
-        st.write("- Suggest promotional strategies targeting high-performing locations.")
-    else:
-        st.error("City data does not have the required columns ('City', 'Views').")
+    st.markdown("**Insights:**")
+    st.write("- Identify regions with high engagement.")
+    st.write("- Adjust content or promotions for underperforming regions.")
 except Exception as e:
-    st.error(f"Error processing city data: {e}")
-
-# 1.4 Recommendations
-st.subheader("1.4 Recommendations Based on Audience Segmentation")
-st.markdown(
-    """
-    - **Personalization:** Create content tailored for dominant age and gender groups.
-    - **Geographic Targeting:** Focus marketing efforts on top-performing cities.
-    - **Expansion Opportunities:** Explore strategies to engage underrepresented demographics.
-    """
-)
+    st.error(f"Error in Geographic Location Analysis: {e}")
