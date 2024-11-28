@@ -1,102 +1,90 @@
 import pandas as pd
 import streamlit as st
-import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.pyplot as plt
 
 # Title and Description
-st.title("Audience Demographic Analysis")
-st.markdown(
-    """
-    Understand your audience composition and identify key demographic groups engaging with your content.
-    """
-)
+st.title("Audience Demographics Analysis Dashboard")
+st.markdown("Analyze the audience demographics and extract actionable insights.")
 
-# Load Data Function
+# Load Dataset
 @st.cache_data
 def load_data(url):
     return pd.read_csv(url)
 
-# Load Data
 try:
-    cities_url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Cities_1%20(1).csv"
-    age_url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Viewer_age.csv"
-    gender_url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Viewer_gender.csv"
-
-    cities_data = load_data(cities_url)
-    age_data = load_data(age_url)
-    gender_data = load_data(gender_url)
+    # Correct URLs
+    cities_data = load_data("https://raw.githubusercontent.com/violetzq/MYCOMM599/05a00ee4078e0b56c6cc6a433d7a3dba1d1e8942/Viewer_Cities.csv")
+    age_data = load_data("https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Viewer_age.csv")
+    gender_data = load_data("https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Viewer_gender.csv")
 except Exception as e:
     st.error(f"Error loading data: {e}")
     st.stop()
 
-# Section 1.2: Age Distribution
-st.subheader("1.2 Age Distribution")
-st.markdown("Identify which age groups dominate the viewership.")
+# 1. Audience Demographics Overview
+st.subheader("1. Audience Demographics Overview")
+st.markdown("Understand the composition of your audience.")
 
+# 1.1 Age Distribution
+st.subheader("1.1 Age Distribution")
 try:
-    # Bar chart of age group views
-    fig1, ax1 = plt.subplots(figsize=(10, 6))
-    sns.barplot(data=age_data, x="Age Group", y="Views", ax=ax1)
-    ax1.set_title("Views by Age Group")
-    ax1.set_ylabel("Total Views")
-    ax1.set_xlabel("Age Group")
-    st.pyplot(fig1)
+    if "Age Group" in age_data.columns and "Views" in age_data.columns:
+        age_chart = age_data.groupby("Age Group")[["Views"]].sum().sort_values(by="Views", ascending=False)
 
-    # Insights
-    max_age_group = age_data.loc[age_data["Views"].idxmax(), "Age Group"]
-    st.write(f"The age group with the most views is **{max_age_group}**.")
+        # Bar chart
+        st.bar_chart(age_chart)
+
+        st.write("**Insights:**")
+        st.write("- Identify which age groups dominate the viewership.")
+        st.write("- Suggest content tailored to the interests of dominant age groups.")
+    else:
+        st.error("Age data does not have the required columns ('Age Group', 'Views').")
 except Exception as e:
-    st.error(f"Error analyzing age distribution: {e}")
+    st.error(f"Error processing age data: {e}")
 
-# Section 1.3: Gender Distribution
-st.subheader("1.3 Gender Distribution")
-st.markdown("Understand the gender balance of the audience.")
-
+# 1.2 Gender Distribution
+st.subheader("1.2 Gender Distribution")
 try:
-    # Bar chart of gender distribution
-    fig2, ax2 = plt.subplots(figsize=(8, 5))
-    sns.barplot(data=gender_data, x="Gender", y="Views", ax=ax2)
-    ax2.set_title("Views by Gender")
-    ax2.set_ylabel("Total Views")
-    ax2.set_xlabel("Gender")
-    st.pyplot(fig2)
+    if "Gender" in gender_data.columns and "Views" in gender_data.columns:
+        gender_chart = gender_data.groupby("Gender")[["Views"]].sum()
 
-    # Gender ratio
-    total_views = gender_data["Views"].sum()
-    gender_data["Percentage"] = (gender_data["Views"] / total_views) * 100
-    male_percentage = gender_data.loc[gender_data["Gender"] == "Male", "Percentage"].values[0]
-    female_percentage = gender_data.loc[gender_data["Gender"] == "Female", "Percentage"].values[0]
-    st.write(f"Gender ratio: **{male_percentage:.1f}% Male**, **{female_percentage:.1f}% Female**.")
+        # Pie chart
+        fig, ax = plt.subplots()
+        ax.pie(gender_chart["Views"], labels=gender_chart.index, autopct="%1.1f%%", startangle=90, colors=["#ff9999","#66b3ff"])
+        ax.set_title("Gender Distribution")
+        st.pyplot(fig)
+
+        st.write("**Insights:**")
+        st.write("- Understand the gender balance in the audience.")
+        st.write("- Suggest content strategies for engaging with underrepresented genders.")
+    else:
+        st.error("Gender data does not have the required columns ('Gender', 'Views').")
 except Exception as e:
-    st.error(f"Error analyzing gender distribution: {e}")
+    st.error(f"Error processing gender data: {e}")
 
-# Section 1.5: Geographic Location
-st.subheader("1.5 Geographic Location")
-st.markdown("Identify where the audience is geographically concentrated.")
-
+# 1.3 Geographic Location
+st.subheader("1.3 Geographic Location")
 try:
-    # Bar chart of top cities
-    top_cities = cities_data.nlargest(10, "Views")
-    fig3, ax3 = plt.subplots(figsize=(12, 6))
-    sns.barplot(data=top_cities, x="City", y="Views", ax=ax3)
-    ax3.set_title("Top 10 Cities by Views")
-    ax3.set_ylabel("Total Views")
-    ax3.set_xlabel("City")
-    ax3.tick_params(axis='x', rotation=45)
-    st.pyplot(fig3)
+    if "City" in cities_data.columns and "Views" in cities_data.columns:
+        city_chart = cities_data.groupby("City")[["Views"]].sum().sort_values(by="Views", ascending=False).head(10)
 
-    # Insights
-    st.write("**Top-performing cities:**")
-    st.write(top_cities[["City", "Views"]])
+        # Bar chart
+        st.bar_chart(city_chart)
+
+        st.write("**Insights:**")
+        st.write("- Identify top-performing cities based on viewership.")
+        st.write("- Suggest promotional strategies targeting high-performing locations.")
+    else:
+        st.error("City data does not have the required columns ('City', 'Views').")
 except Exception as e:
-    st.error(f"Error analyzing geographic location: {e}")
+    st.error(f"Error processing city data: {e}")
 
-# Section 1.6: Recommendations
-st.subheader("1.6 Recommendations Based on Audience Segmentation")
-st.write(
+# 1.4 Recommendations
+st.subheader("1.4 Recommendations Based on Audience Segmentation")
+st.markdown(
     """
-    - **Age Groups:** Focus on creating content tailored to the age group with the most views, while exploring ways to attract other age groups.
-    - **Gender:** Leverage the gender insights to create targeted marketing strategies.
-    - **Geographic Targeting:** Promote content in top-performing cities and explore opportunities to grow viewership in underperforming areas.
+    - **Personalization:** Create content tailored for dominant age and gender groups.
+    - **Geographic Targeting:** Focus marketing efforts on top-performing cities.
+    - **Expansion Opportunities:** Explore strategies to engage underrepresented demographics.
     """
 )
