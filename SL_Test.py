@@ -4,128 +4,111 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Title
-st.title("YouTube Audience Demographic Analysis with Search and Subscription Insights")
+st.title("YouTube Audience Demographics and Insights")
 
 # Load Dataset Functions
 @st.cache_data
-def load_subscription_chart_data():
-    url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Subscription%20status_Chart%20data.csv"
+def load_age_data():
+    url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Viewer_age.csv"
     return pd.read_csv(url)
 
 @st.cache_data
-def load_subscription_summary_data():
+def load_gender_data():
+    url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Viewer_gender.csv"
+    data = pd.read_csv(url)
+    # Remove "User-specified" from gender data
+    return data[data["Viewer gender"] != "User-specified"]
+
+@st.cache_data
+def load_cities_data():
+    url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Viewer_Cities.csv"
+    return pd.read_csv(url)
+
+@st.cache_data
+def load_subscription_data():
     url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Subscription_status.csv"
     return pd.read_csv(url)
 
 # Load Data
 try:
-    subscription_chart_data = load_subscription_chart_data()
-    subscription_summary_data = load_subscription_summary_data()
+    age_data = load_age_data()
+    gender_data = load_gender_data()
+    cities_data = load_cities_data()
+    subscription_data = load_subscription_data()
 except Exception as e:
-    st.error(f"Error loading subscription data: {e}")
+    st.error(f"Error loading data: {e}")
     st.stop()
 
-# Data Preprocessing
-try:
-    # Preprocess subscription chart data
-    subscription_chart_data['Date'] = pd.to_datetime(subscription_chart_data['Date'], errors='coerce')
-
-    # Remove unnecessary rows from subscription summary data
-    subscription_summary_data = subscription_summary_data[
-        subscription_summary_data['Subscription status'] != "Total"
-    ]
-except Exception as e:
-    st.error(f"Error processing subscription data: {e}")
-    st.stop()
-
-# Subscription Insights
-st.subheader("Subscription Status Analysis")
-st.markdown("Analyze viewership metrics for subscribed vs. non-subscribed viewers.")
-
-# Search Feature for Subscription Data
-st.subheader("Search Subscription Data")
-search_term = st.text_input("Search by Subscription Status (e.g., Subscribed, Not subscribed):").strip()
-
-if search_term:
-    filtered_subscription_data = subscription_summary_data[
-        subscription_summary_data["Subscription status"].str.contains(search_term, case=False, na=False)
-    ]
-    if not filtered_subscription_data.empty:
-        st.write("**Search Results:**")
-        st.write(filtered_subscription_data)
-    else:
-        st.warning("No results found. Try searching for another term.")
-
-# Bar Chart for Summary Data
-st.write("**Views by Subscription Status**")
+# 1. Age Distribution
+st.subheader("1. Age Distribution")
 fig1, ax1 = plt.subplots(figsize=(10, 6))
-sns.barplot(
-    data=subscription_summary_data,
-    x="Subscription status",
-    y="Views",
-    ax=ax1,
-    palette="viridis"
-)
-ax1.set_title("Views by Subscription Status")
-ax1.set_ylabel("Views")
-ax1.set_xlabel("Subscription Status")
+sns.barplot(data=age_data, x="Viewer age", y="Views (%)", palette="viridis", ax=ax1)
+ax1.set_title("Age Group Distribution of Views")
+ax1.set_ylabel("Views (%)")
+ax1.set_xlabel("Age Group")
 st.pyplot(fig1)
 
-# Average View Duration Comparison
-st.write("**Average View Duration by Subscription Status**")
-fig2, ax2 = plt.subplots(figsize=(10, 6))
-sns.barplot(
-    data=subscription_summary_data,
-    x="Subscription status",
-    y="Average view duration",
-    ax=ax2,
-    palette="coolwarm"
-)
-ax2.set_title("Average View Duration by Subscription Status")
-ax2.set_ylabel("Average View Duration")
-ax2.set_xlabel("Subscription Status")
+# 2. Gender Distribution
+st.subheader("2. Gender Distribution")
+fig2, ax2 = plt.subplots(figsize=(8, 5))
+sns.barplot(data=gender_data, x="Viewer gender", y="Views (%)", palette="coolwarm", ax=ax2)
+ax2.set_title("Gender Distribution of Views")
+ax2.set_ylabel("Views (%)")
+ax2.set_xlabel("Gender")
 st.pyplot(fig2)
 
-# Subscription Trend Over Time
-st.write("**Views Over Time by Subscription Status**")
-fig3, ax3 = plt.subplots(figsize=(12, 6))
-sns.lineplot(
-    data=subscription_chart_data,
-    x="Date",
-    y="Views",
-    hue="Subscription status",
-    ax=ax3
-)
-ax3.set_title("Views Over Time by Subscription Status")
-ax3.set_ylabel("Views")
-ax3.set_xlabel("Date")
-st.pyplot(fig3)
+# 3. Geographic Location
+st.subheader("3. Geographic Location")
 
-# Geographic Location Search Feature (Optional)
-st.subheader("Search by City (Optional)")
+# Search Feature for City Data
+st.subheader("Search by City")
 city_search_term = st.text_input("Search for City (e.g., New York, London):").strip()
-
-# Mock Data Example (replace with actual city data in integration)
-city_data = pd.DataFrame({
-    "City": ["New York", "London", "Los Angeles", "Tokyo", "Chicago"],
-    "Views": [2000000, 1500000, 1000000, 500000, 300000]
-})
-
 if city_search_term:
-    filtered_city_data = city_data[city_data["City"].str.contains(city_search_term, case=False, na=False)]
+    filtered_city_data = cities_data[cities_data["City name"].str.contains(city_search_term, case=False, na=False)]
     if not filtered_city_data.empty:
         st.write("**City Search Results:**")
         st.write(filtered_city_data)
     else:
         st.warning("No results found for the city. Try another search.")
 
-# Insights
-st.write("**Insights from Subscription Analysis:**")
-st.write("- Compare metrics like views and average view duration between subscribed and non-subscribed audiences.")
-st.write("- Use trends over time to identify shifts in engagement and strategize content or marketing accordingly.")
-st.write("- Prioritize engaging content for subscribed viewers while encouraging non-subscribed viewers to subscribe.")
+# Bar Chart for Top Cities by Views
+st.write("**Top Cities by Views**")
+top_cities = cities_data.sort_values(by="Views", ascending=False).head(10)
+fig3, ax3 = plt.subplots(figsize=(12, 6))
+sns.barplot(data=top_cities, x="Views", y="City name", palette="mako", ax=ax3)
+ax3.set_title("Top 10 Cities by Views")
+ax3.set_xlabel("Views")
+ax3.set_ylabel("City")
+st.pyplot(fig3)
 
-# Recommendations
-st.subheader("Recommendations Based on Subscription Insights")
-st.write("- **Engagement Strategy:** Create content tailored to engaged (subscribed) audiences and include calls-to-action for non-subscribers.")
-st.write("- **Content Promotion:** Use insights to promote specific types of content that are popular among non-subscribed viewers.")
+# Heatmap for City Data
+st.write("**City Heatmap (Views and Watch Time)**")
+if "Views" in cities_data.columns and "Watch time (hours)" in cities_data.columns:
+    heatmap_data = cities_data.pivot_table(
+        index="City name", values=["Views", "Watch time (hours)"], aggfunc="sum"
+    )
+    fig4, ax4 = plt.subplots(figsize=(10, 12))
+    sns.heatmap(
+        heatmap_data,
+        cmap="YlGnBu",
+        annot=True,
+        fmt=".0f",
+        linewidths=0.5,
+        cbar_kws={"label": "Value"},
+        ax=ax4,
+    )
+    ax4.set_title("Heatmap of Views and Watch Time by City")
+    st.pyplot(fig4)
+else:
+    st.warning("Data for heatmap is missing.")
+
+# 4. Subscription Data
+st.subheader("4. Subscription Status")
+
+# Bar Chart for Subscription Data
+fig5, ax5 = plt.subplots(figsize=(8, 5))
+sns.barplot(data=subscription_data, x="Subscription status", y="Views", palette="Set2", ax=ax5)
+ax5.set_title("Views by Subscription Status")
+ax5.set_ylabel("Total Views")
+ax5.set_xlabel("Subscription Status")
+st.pyplot(fig5)
