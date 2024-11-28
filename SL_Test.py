@@ -20,6 +20,9 @@ def load_data():
 
 try:
     age_data, gender_data, city_data = load_data()
+
+    # Filter out "User-specified" in gender data
+    gender_data = gender_data[gender_data["Viewer gender"] != "User-specified"]
 except Exception as e:
     st.error(f"Error loading data: {e}")
     st.stop()
