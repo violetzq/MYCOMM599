@@ -81,34 +81,38 @@ ax3.set_xlabel("Views")
 ax3.set_ylabel("City")
 st.pyplot(fig3)
 
-# Heatmap for City Data
-st.write("**City Heatmap (Views and Watch Time)**")
-if "Views" in cities_data.columns and "Watch time (hours)" in cities_data.columns:
-    heatmap_data = cities_data.pivot_table(
-        index="City name", values=["Views", "Watch time (hours)"], aggfunc="sum"
-    )
+# Separate Heatmaps for Views and Watch Time
+st.write("**City Heatmap - Views**")
+try:
+    heatmap_views = cities_data.pivot_table(index="City name", values="Views", aggfunc="sum")
     fig4, ax4 = plt.subplots(figsize=(10, 12))
-    sns.heatmap(
-        heatmap_data,
-        cmap="YlGnBu",
-        annot=True,
-        fmt=".0f",
-        linewidths=0.5,
-        cbar_kws={"label": "Value"},
-        ax=ax4,
-    )
-    ax4.set_title("Heatmap of Views and Watch Time by City")
+    sns.heatmap(heatmap_views, cmap="Blues", annot=True, fmt=".0f", linewidths=0.5, ax=ax4)
+    ax4.set_title("Heatmap of Views by City")
+    ax4.set_ylabel("City")
+    ax4.set_xlabel("Views")
     st.pyplot(fig4)
-else:
-    st.warning("Data for heatmap is missing.")
+except Exception as e:
+    st.error(f"Error generating heatmap for Views: {e}")
+
+st.write("**City Heatmap - Watch Time**")
+try:
+    heatmap_watch_time = cities_data.pivot_table(index="City name", values="Watch time (hours)", aggfunc="sum")
+    fig5, ax5 = plt.subplots(figsize=(10, 12))
+    sns.heatmap(heatmap_watch_time, cmap="Greens", annot=True, fmt=".0f", linewidths=0.5, ax=ax5)
+    ax5.set_title("Heatmap of Watch Time by City")
+    ax5.set_ylabel("City")
+    ax5.set_xlabel("Watch Time (hours)")
+    st.pyplot(fig5)
+except Exception as e:
+    st.error(f"Error generating heatmap for Watch Time: {e}")
 
 # 4. Subscription Data
 st.subheader("4. Subscription Status")
 
 # Bar Chart for Subscription Data
-fig5, ax5 = plt.subplots(figsize=(8, 5))
-sns.barplot(data=subscription_data, x="Subscription status", y="Views", palette="Set2", ax=ax5)
-ax5.set_title("Views by Subscription Status")
-ax5.set_ylabel("Total Views")
-ax5.set_xlabel("Subscription Status")
-st.pyplot(fig5)
+fig6, ax6 = plt.subplots(figsize=(8, 5))
+sns.barplot(data=subscription_data, x="Subscription status", y="Views", palette="Set2", ax=ax6)
+ax6.set_title("Views by Subscription Status")
+ax6.set_ylabel("Total Views")
+ax6.set_xlabel("Subscription Status")
+st.pyplot(fig6)
