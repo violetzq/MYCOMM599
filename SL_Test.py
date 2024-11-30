@@ -81,30 +81,41 @@ ax3.set_xlabel("Views")
 ax3.set_ylabel("City")
 st.pyplot(fig3)
 
-# Separate Heatmaps for Views and Watch Time
-st.write("**City Heatmap - Views**")
-try:
-    heatmap_views = cities_data.pivot_table(index="City name", values="Views", aggfunc="sum")
-    fig4, ax4 = plt.subplots(figsize=(10, 12))
-    sns.heatmap(heatmap_views, cmap="Blues", annot=True, fmt=".0f", linewidths=0.5, ax=ax4)
-    ax4.set_title("Heatmap of Views by City")
-    ax4.set_ylabel("City")
-    ax4.set_xlabel("Views")
-    st.pyplot(fig4)
-except Exception as e:
-    st.error(f"Error generating heatmap for Views: {e}")
+# Heatmap for "Views" - Top Cities
+st.subheader("City Heatmap - Views")
+top_cities_views = cities_data.sort_values(by="Views", ascending=False).head(20)  # Top 20 cities by Views
+fig1, ax1 = plt.subplots(figsize=(10, 10))
+sns.heatmap(
+    top_cities_views.pivot_table(index="City name", values="Views", aggfunc="sum"),
+    cmap="Blues",
+    annot=True,
+    fmt=".0f",
+    linewidths=0.5,
+    cbar_kws={"label": "Views"},
+    ax=ax1,
+)
+ax1.set_title("Heatmap of Views by City")
+ax1.set_xlabel("Views")
+ax1.set_ylabel("City")
+st.pyplot(fig1)
 
-st.write("**City Heatmap - Watch Time**")
-try:
-    heatmap_watch_time = cities_data.pivot_table(index="City name", values="Watch time (hours)", aggfunc="sum")
-    fig5, ax5 = plt.subplots(figsize=(10, 12))
-    sns.heatmap(heatmap_watch_time, cmap="Greens", annot=True, fmt=".0f", linewidths=0.5, ax=ax5)
-    ax5.set_title("Heatmap of Watch Time by City")
-    ax5.set_ylabel("City")
-    ax5.set_xlabel("Watch Time (hours)")
-    st.pyplot(fig5)
-except Exception as e:
-    st.error(f"Error generating heatmap for Watch Time: {e}")
+# Heatmap for "Watch Time" - Top Cities
+st.subheader("City Heatmap - Watch Time")
+top_cities_watch_time = cities_data.sort_values(by="Watch time (hours)", ascending=False).head(20)  # Top 20 cities
+fig2, ax2 = plt.subplots(figsize=(10, 10))
+sns.heatmap(
+    top_cities_watch_time.pivot_table(index="City name", values="Watch time (hours)", aggfunc="sum"),
+    cmap="Greens",
+    annot=True,
+    fmt=".0f",
+    linewidths=0.5,
+    cbar_kws={"label": "Watch Time (hours)"},
+    ax=ax2,
+)
+ax2.set_title("Heatmap of Watch Time by City")
+ax2.set_xlabel("Watch Time (hours)")
+ax2.set_ylabel("City")
+st.pyplot(fig2)
 
 # 4. Subscription Data
 st.subheader("4. Subscription Status")
