@@ -29,74 +29,70 @@ if "Video publish time" in data.columns:
         ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     )  # Average views by day of week
 
-# Group by Day and Category for deeper insights
-if "Day of Week" in data.columns and "Category" in data.columns:
-    day_category = data.groupby(["Day of Week", "Category"])["Views"].mean().unstack()
-
-# Streamlit Layout
+# Layout: Proportional Content
 st.title("📊 Programming Strategy Insights")
-st.subheader("Baseline Viewership Performance")
 
-# Average Views by Day of Week (Baseline)
-if "Day of Week" in data.columns:
-    st.write("**Average Views by Day of Week**")
-    fig, ax = plt.subplots(figsize=(8, 4))
-    sns.barplot(x=average_views_day.index, y=average_views_day.values, palette="viridis", ax=ax)
-    ax.set_title("Baseline: Average Views by Day of Week", fontsize=12)
-    ax.set_ylabel("Average Views")
-    ax.set_xlabel("Day of Week")
-    plt.xticks(rotation=45)
-    st.pyplot(fig)
+# Organize baseline performance and title-specific comparison into columns
+col1, col2 = st.columns(2)
 
-    # Average Views by Day of Week and Category
-    if "Category" in data.columns:
-        st.subheader("Average Views by Day of Week and Category")
-        st.dataframe(day_category.style.background_gradient(cmap="coolwarm"))
+# Baseline Analysis
+with col1:
+    st.subheader("Baseline Viewership Performance")
+    if "Day of Week" in data.columns:
+        fig, ax = plt.subplots(figsize=(6, 4))
+        sns.barplot(x=average_views_day.index, y=average_views_day.values, palette="viridis", ax=ax)
+        ax.set_title("Baseline: Average Views by Day of Week", fontsize=12)
+        ax.set_ylabel("Average Views")
+        ax.set_xlabel("Day of Week")
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
 
-# Allow the user to compare specific titles
-st.subheader("Compare Specific Titles to the Baseline")
+# Title-Specific Comparison
+with col2:
+    st.subheader("Compare Specific Titles to the Baseline")
 
-# Select a Title
-if "Video title" in data.columns:
-    title_list = data["Video title"].unique().tolist()
-    selected_title = st.selectbox("Select a Video Title:", title_list)
+    # Select a Title
+    if "Video title" in data.columns:
+        title_list = data["Video title"].unique().tolist()
+        selected_title = st.selectbox("Select a Video Title:", title_list)
 
-    if selected_title:
-        # Extract data for the selected title
-        title_data = data[data["Video title"] == selected_title]
+        if selected_title:
+            # Extract data for the selected title
+            title_data = data[data["Video title"] == selected_title]
 
-        # Calculate views by day of week for the selected title
-        if "Day of Week" in title_data.columns:
-            title_views_day = title_data.groupby("Day of Week")["Views"].mean().reindex(
-                ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-            )
-
-            # Visualize Comparison
-            st.write(f"**Performance of '{selected_title}' by Day of Week**")
-            fig, ax = plt.subplots(figsize=(8, 4))
-            sns.barplot(x=title_views_day.index, y=title_views_day.values, palette="coolwarm", ax=ax)
-            ax.set_title(f"Performance of '{selected_title}' vs Baseline", fontsize=12)
-            ax.set_ylabel("Average Views")
-            ax.set_xlabel("Day of Week")
-            plt.xticks(rotation=45)
-            st.pyplot(fig)
-
-        # Highlight Recommendations
-        st.subheader("💡 Recommendations Based on Comparison")
-        if not title_data.empty:
-            # Compare title's average views to baseline
-            title_avg_views = title_data["Views"].mean()
-            baseline_avg_views = data["Views"].mean()
-
-            if title_avg_views > baseline_avg_views:
-                st.write(
-                    f"- The video **'{selected_title}'** is performing **above average** with an average of {title_avg_views:.0f} views compared to the baseline of {baseline_avg_views:.0f} views."
+            if "Day of Week" in title_data.columns:
+                # Handle missing days gracefully
+                title_views_day = title_data.groupby("Day of Week")["Views"].mean().reindex(
+                    ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], fill_value=0
                 )
+
+                # Visualize Comparison
+                fig, ax = plt.subplots(figsize=(6, 4))
+                sns.barplot(x=title_views_day.index, y=title_views_day.values, palette="coolwarm", ax=ax)
+                ax.set_title(f"Performance of '{selected_title}' by Day of Week", fontsize=12)
+                ax.set_ylabel("Average Views")
+                ax.set_xlabel("Day of Week")
+                plt.xticks(rotation=45)
+                st.pyplot(fig)
+
             else:
-                st.write(
-                    f"- The video **'{selected_title}'** is performing **below average** with an average of {title_avg_views:.0f} views compared to the baseline of {baseline_avg_views:.0f} views. Consider improving its visibility or content."
-                )
+                st.warning(f"No day-of-week data available for the selected title '{selected_title}'.")
+
+# Recommendations Section
+st.subheader("💡 Recommendations Based on Comparison")
+if "Video title" in data.columns and selected_title:
+    if not title_data.empty:
+        # Compare title's average views to baseline
+        title_avg_views = title_data["Views"].mean()
+        baseline_avg_views = data["Views"].mean()
+
+        if title_avg_views > baseline_avg_views:
+            st.write(
+                f"- The video **'{selected_title}'** is performing **above average** with an average of {title_avg_views:.0f} views compared to the baseline of {baseline_avg_views:.0f} views."
+            )
         else:
-            st.write("No data available for the selected title.")
-else:
-    st.warning("The dataset does not contain 'Video title' column, so title-specific analysis is unavailable.")
+            st.write(
+                f"- The video **'{selected_title}'** is performing **below average** with an average of {title_avg_views:.0f} views compared to the baseline of {baseline_avg_views:.0f} views. Consider improving its visibility or content."
+            )
+    else:
+        st.write("No data available for the selected title.")
