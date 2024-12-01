@@ -27,26 +27,33 @@ if "Video publish time" in data.columns:
         ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     )
 
-# Layout: Add Padding and Spacing
+# Custom CSS for Center Alignment and Spacing
 st.markdown("""
     <style>
     .block-container {
-        padding: 3rem 5rem;
+        padding: 2rem 4rem;
+    }
+    .center {
+        text-align: center;
     }
     .section {
-        margin-top: 3rem;
-        margin-bottom: 3rem;
+        margin: 3rem auto;
+        padding: 2rem;
+        background-color: #f9f9f9;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        width: 80%;
     }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 Programming Strategy Insights")
+st.markdown('<div class="center"><h1>📊 Programming Strategy Insights</h1></div>', unsafe_allow_html=True)
 
-# Baseline Analysis
+# Baseline Analysis Section
 st.markdown('<div class="section">', unsafe_allow_html=True)
 st.subheader("Baseline Viewership Performance")
 if "Day of Week" in data.columns:
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(6, 4))  # Reduced size for better fit
     sns.barplot(x=average_views_day.index, y=average_views_day.values, palette="viridis", ax=ax)
     ax.axhline(data["Views"].mean(), color="red", linestyle="--", label="Overall Baseline")  # Add baseline line
     ax.legend()
@@ -57,7 +64,7 @@ if "Day of Week" in data.columns:
     st.pyplot(fig)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# Title-Specific Comparison
+# Title-Specific Comparison Section
 st.markdown('<div class="section">', unsafe_allow_html=True)
 st.subheader("Compare Specific Titles to the Baseline")
 if "Video title" in data.columns:
@@ -71,7 +78,7 @@ if "Video title" in data.columns:
                 ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], fill_value=0
             )
 
-            fig, ax = plt.subplots(figsize=(8, 5))
+            fig, ax = plt.subplots(figsize=(6, 4))  # Reduced size for better fit
             sns.barplot(x=title_views_day.index, y=title_views_day.values, palette="coolwarm", ax=ax)
             ax.axhline(data["Views"].mean(), color="red", linestyle="--", label="Overall Baseline")  # Add baseline line
             ax.legend()
