@@ -3,15 +3,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import streamlit as st
 
-# Overview
-st.title("Content Performance Analysis")
-st.header("Overview of All Categories")
-
-category_summary = data.groupby('Category').agg({
-    'Views': 'sum',
-    'Watch time (hours)': 'sum',
-    'Impressions click-through rate (%)': 'mean'
-}).reset_index()
+# Title
+st.title("YouTube Content Categories Analysis")
 
 # Load Dataset
 @st.cache_data
