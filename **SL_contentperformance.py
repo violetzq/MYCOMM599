@@ -1,10 +1,25 @@
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import streamlit as st
 
-# Load your dataset from GitHub
-data_url = 'https://raw.githubusercontent.com/violetzq/MYCOMM599/main/DangerTV_Content.csv'
-data = pd.read_csv(data_url, encoding='ISO-8859-1')
+# Title
+st.title("YouTube Content Categories Analysis")
+
+# Load Dataset
+@st.cache_data
+def load_data():
+    try:
+        data_url = 'https://raw.githubusercontent.com/violetzq/MYCOMM599/main/DangerTV_Content.csv'
+        return pd.read_csv(data_url, encoding='ISO-8859-1')
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        return pd.DataFrame()
+
+data = load_data()
+
+if data.empty:
+    st.stop()
 
 # Define categories
 categories = {
@@ -36,30 +51,35 @@ category_summary = data.groupby('Category').agg({
     'Impressions click-through rate (%)': 'mean'
 }).reset_index()
 
-# Bar chart for total views by category
-plt.figure(figsize=(12, 6))
-sns.barplot(x='Views', y='Category', data=category_summary, palette='viridis')
-plt.title('Total Views by Category')
-plt.xlabel('Total Views')
-plt.ylabel('Category')
-plt.tight_layout()
-plt.show()
-plt.close('all')  # Close the figure to prevent it from stacking in future plots
+# 1. Bar chart for total views by category
+st.subheader("Total Views by Category")
+fig, ax = plt.subplots(figsize=(12, 6))
+sns.barplot(x='Views', y='Category', data=category_summary, palette='viridis', ax=ax)
+ax.set_title('Total Views by Category')
+ax.set_xlabel('Total Views')
+ax.set_ylabel('Category')
+st.pyplot(fig)
 
 # Insights
-print("Insights:")
-top_category_views = category_summary.loc[category_summary['Views'].idxmax()]
-top_category_ctr = category_summary.loc[category_summary['Impressions click-through rate (%)'].idxmax()]
-print(f"- The category with the highest total views is {top_category_views['Category']} with {top_category_views['Views']:.0f} views.")
-print(f"- The category with the highest average CTR is {top_category_ctr['Category']} with {top_category_ctr['Impressions click-through rate (%)']:.2f}% CTR.")
-
-# Top Videos by Category
-selected_category = "Wildlife"  # Replace with your choice
-filtered_data = data[data['Category'] == selected_category]
-
-if not filtered_data.empty:
-    print(f"\nTop 10 Videos in {selected_category}:")
-    top_videos = filtered_data.sort_values(by='Views', ascending=False).head(10)
-    print(top_videos[['Video title', 'Views', 'Watch time (hours)', 'Impressions click-through rate (%)']])
+st.subheader("Category Insights")
+if not category_summary.empty:
+    top_category_views = category_summary.loc[category_summary['Views'].idxmax()]
+    top_category_ctr = category_summary.loc[category_summary['Impressions click-through rate (%)'].idxmax()]
+    st.write(f"- The category with the **highest total views** is **{top_category_views['Category']}** with **{top_category_views['Views']:.0f} views**.")
+    st.write(f"- The category with the **highest average CTR** is **{top_category_ctr['Category']}** with **{top_category_ctr['Impressions click-through rate (%)']:.2f}% CTR**.")
 else:
-    print(f"No videos found in category {selected_category}.")
+    st.write("No data available for insights.")
+
+# 2. Top Videos by Category
+st.subheader("Top Videos by Category")
+categories_list = category_summary['Category'].tolist()
+selected_category = st.selectbox("Select a Category:", categories_list)
+
+if selected_category:
+    filtered_data = data[data['Category'] == selected_category]
+    if not filtered_data.empty:
+        st.write(f"**Top 10 Videos in {selected_category}:**")
+        top_videos = filtered_data.sort_values(by='Views', ascending=False).head(10)
+        st.write(top_videos[['Video title', 'Views', 'Watch time (hours)', 'Impressions click-through rate (%)']])
+    else:
+        st.warning(f"No videos found in category {selected_category}.")
