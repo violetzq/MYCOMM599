@@ -1,134 +1,87 @@
-import pandas as pd
-import numpy as np
 import streamlit as st
+import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# Title and Description
-st.title("YouTube Programming Strategy Dashboard")
-st.markdown("Analyze your YouTube performance data and get actionable programming insights.")
+# Page Configuration
+st.set_page_config(page_title="Programming Strategy Insights", page_icon="📊", layout="wide")
 
 # Load Dataset
 @st.cache_data
-def load_data():
+def load_content_data():
     url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/DangerTV_Content.csv"
-    return pd.read_csv(url)
+    return pd.read_csv(url, parse_dates=["Upload date"])  # Ensure "Upload date" is parsed as datetime
 
-try:
-    data = load_data()
-    # Ensure required columns are present
-    if "Video publish time" not in data.columns or "Views" not in data.columns:
-        st.error("Required columns are missing from the dataset.")
-        st.stop()
-    # Preprocess data
-    data["Video publish time"] = pd.to_datetime(data["Video publish time"], errors="coerce")
-    data["day_of_week"] = data["Video publish time"].dt.day_name()
-    data["hour_of_day"] = data["Video publish time"].dt.hour
-except Exception as e:
-    st.error(f"Error loading or processing data: {e}")
-    st.stop()
+# Load Data
+data = load_content_data()
 
-# Sidebar Filters
-st.sidebar.header("Filters")
-selected_day = st.sidebar.multiselect(
-    "Select Day(s) of the Week", options=data["day_of_week"].unique(), default=data["day_of_week"].unique()
-)
-selected_hours = st.sidebar.slider("Select Hour Range", 0, 23, (0, 23))
+# Data Preparation
+data["Day of Week"] = data["Upload date"].dt.day_name()  # Extract day of the week
+average_views_day = data.groupby("Day of Week")["Views"].mean().reindex(
+    ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+)  # Average views by day of week
 
-# Filter Data
-filtered_data = data[
-    (data["day_of_week"].isin(selected_day)) & (data["hour_of_day"].between(selected_hours[0], selected_hours[1]))
-]
+# Group by Day and Category for deeper insights
+day_category = data.groupby(["Day of Week", "Category"])["Views"].mean().unstack()
 
-# 1. Analyze Peak Viewing Times
-st.subheader("1. Analyze Peak Viewing Times")
-st.markdown("Identify trends in when viewers engage most actively with the content.")
+# Streamlit Layout
+st.title("📊 Programming Strategy Insights")
+st.subheader("Baseline Viewership Performance")
 
-# Bar chart of Views by Day of the Week
-try:
-    # Calculate average views by day of the week
-    views_by_day = data.groupby("day_of_week")["Views"].mean().reindex(
+# Average Views by Day of Week (Baseline)
+st.write("**Average Views by Day of Week**")
+fig, ax = plt.subplots(figsize=(8, 4))
+sns.barplot(x=average_views_day.index, y=average_views_day.values, palette="viridis", ax=ax)
+ax.set_title("Baseline: Average Views by Day of Week", fontsize=12)
+ax.set_ylabel("Average Views")
+ax.set_xlabel("Day of Week")
+plt.xticks(rotation=45)
+st.pyplot(fig)
+
+# Average Views by Day of Week and Category
+st.subheader("Average Views by Day of Week and Category")
+st.dataframe(day_category.style.background_gradient(cmap="coolwarm"))
+
+# Allow the user to compare specific titles
+st.subheader("Compare Specific Titles to the Baseline")
+
+# Select a Title
+title_list = data["Video title"].unique().tolist()
+selected_title = st.selectbox("Select a Video Title:", title_list)
+
+if selected_title:
+    # Extract data for the selected title
+    title_data = data[data["Video title"] == selected_title]
+
+    # Calculate views by day of week for the selected title
+    title_views_day = title_data.groupby("Day of Week")["Views"].mean().reindex(
         ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     )
 
-    st.write("**Average Views by Day of the Week**")
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.barplot(x=views_by_day.index, y=views_by_day.values, palette="coolwarm", ax=ax)
-    ax.set_title("Average Views by Day of the Week")
+    # Visualize Comparison
+    st.write(f"**Performance of '{selected_title}' by Day of Week**")
+    fig, ax = plt.subplots(figsize=(8, 4))
+    sns.barplot(x=title_views_day.index, y=title_views_day.values, palette="coolwarm", ax=ax)
+    ax.set_title(f"Performance of '{selected_title}' vs Baseline", fontsize=12)
     ax.set_ylabel("Average Views")
-    ax.set_xlabel("Day of the Week")
+    ax.set_xlabel("Day of Week")
+    plt.xticks(rotation=45)
     st.pyplot(fig)
-except Exception as e:
-    st.error(f"Error generating day-of-week insights: {e}")
 
-# Insights
-st.write("**Insights:**")
-st.write(
-    "- Identify peak days from the bar chart."
-    "\n- Schedule content posting during high-engagement days."
-    "\n- Avoid low-engagement days for better viewer traction."
-)
+    # Highlight Recommendations
+    st.subheader("💡 Recommendations Based on Comparison")
+    if not title_data.empty:
+        # Compare title's average views to baseline
+        title_avg_views = title_data["Views"].mean()
+        baseline_avg_views = data["Views"].mean()
 
-# 2. Content Length Analysis
-st.subheader("2. Content Length Analysis")
-if "Average view duration" in data.columns:
-    st.markdown("Evaluate viewer retention to determine the ideal video length for engagement.")
-    content_length_analysis = data["Average view duration"].dropna()
-    st.line_chart(content_length_analysis)
-
-    st.write("**Insights:**")
-    st.write("- Identify whether shorter or longer videos retain viewers better.")
-    st.write("- Suggest adjustments to content length based on average view duration trends.")
-
-# 3. CTR and Thumbnail Optimization
-st.subheader("3. CTR and Thumbnail Optimization")
-if "Impressions click-through rate (%)" in data.columns:
-    st.markdown("Analyze videos with high CTR to evaluate their titles, thumbnails, and descriptions.")
-    top_ctr_videos = data.sort_values("Impressions click-through rate (%)", ascending=False).head(10)
-    st.write("**Top 10 Videos with Highest CTR**")
-    st.write(top_ctr_videos[["Video title", "Impressions click-through rate (%)", "Views"]])
-
-    st.write("**Insights:**")
-    st.write("- Analyze the thumbnails, titles, and descriptions of these videos to identify what works best.")
-    st.write("- Use these findings to optimize future content.")
-
-# 4. Optimal Scheduling Recommendations
-st.subheader("4. Optimal Scheduling Recommendations")
-optimal_schedule = views_heatmap.stack().reset_index()
-optimal_schedule.columns = ["Day", "Hour", "Average Views"]
-optimal_schedule = optimal_schedule.sort_values(by="Average Views", ascending=False).head(5)
-st.write("**Recommended Posting Times**")
-st.write(optimal_schedule)
-
-st.write("**Insights:**")
-st.write("- Use the table to decide the best times for posting new videos.")
-
-# 5. Viewer Engagement Trends
-st.subheader("5. Viewer Engagement Trends")
-if "Watch time (hours)" in data.columns:
-    engagement_trends = data.groupby("day_of_week")["Watch time (hours)"].sum().reindex(
-        ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    )
-    st.bar_chart(engagement_trends)
-
-    st.write("**Insights:**")
-    st.write("- Identify days with the highest watch time and focus on publishing content on those days.")
-
-# 6. Cross-Promotion Opportunities
-st.subheader("6. Cross-Promotion Opportunities")
-if "Content" in data.columns:
-    content_performance = data.groupby("Content")["Views"].sum().sort_values(ascending=False)
-    st.bar_chart(content_performance)
-
-    st.write("**Insights:**")
-    st.write("- Identify series or playlists with high engagement for cross-promotion.")
-    st.write("- Use this data to prioritize high-performing categories.")
-
-# Experimentation Plan
-st.subheader("Experimentation Plan")
-st.write(
-    "Suggestions for testing new scheduling patterns, video formats, or cross-category content:"
-    "\n1. Experiment with posting videos at different peak hours."
-    "\n2. Test the impact of various thumbnail designs on CTR."
-    "\n3. Introduce new content categories and measure engagement."
-)
+        if title_avg_views > baseline_avg_views:
+            st.write(
+                f"- The video **'{selected_title}'** is performing **above average** with an average of {title_avg_views:.0f} views compared to the baseline of {baseline_avg_views:.0f} views."
+            )
+        else:
+            st.write(
+                f"- The video **'{selected_title}'** is performing **below average** with an average of {title_avg_views:.0f} views compared to the baseline of {baseline_avg_views:.0f} views. Consider improving its visibility or content."
+            )
+    else:
+        st.write("No data available for the selected title.")
