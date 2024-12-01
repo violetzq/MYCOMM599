@@ -13,7 +13,7 @@ st.markdown(
         .stTabs [data-baseweb="tab"] {
             border: 2px solid #ccc;
             border-radius: 5px;
-            padding: 8px;
+            padding: 6px;
             margin-right: 4px;
         }
         .stTabs [data-baseweb="tab"]:hover {
@@ -48,6 +48,29 @@ urls = {
     "content": "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/DangerTV_Content.csv",
 }
 
+# Helper Functions for Visualizations
+def plot_bar(data, x, y, title, palette, figsize=(6, 3), xlabel=None, ylabel=None):
+    fig, ax = plt.subplots(figsize=figsize)
+    sns.barplot(data=data, x=x, y=y, palette=palette, ax=ax)
+    ax.set_title(title, fontsize=12)
+    if xlabel: ax.set_xlabel(xlabel)
+    if ylabel: ax.set_ylabel(ylabel)
+    st.pyplot(fig)
+
+def plot_heatmap(data, index, value, title, cmap, figsize=(6, 6)):
+    fig, ax = plt.subplots(figsize=figsize)
+    sns.heatmap(
+        data.pivot_table(index=index, values=value, aggfunc="sum"),
+        cmap=cmap,
+        annot=True,
+        fmt=".0f",
+        linewidths=0.5,
+        cbar_kws={"label": value},
+        ax=ax,
+    )
+    ax.set_title(title, fontsize=12)
+    st.pyplot(fig)
+
 # Tab 1: YouTube Audience Insights
 with tabs[0]:
     st.header("🎥 YouTube Audience Insights")
@@ -63,36 +86,13 @@ with tabs[0]:
         st.error(f"Error loading data: {e}")
         st.stop()
 
-    # Helper function for visualizations
-    def plot_bar(data, x, y, title, palette, figsize=(8, 4), xlabel=None, ylabel=None):
-        fig, ax = plt.subplots(figsize=figsize)
-        sns.barplot(data=data, x=x, y=y, palette=palette, ax=ax)
-        ax.set_title(title, fontsize=14)
-        if xlabel: ax.set_xlabel(xlabel)
-        if ylabel: ax.set_ylabel(ylabel)
-        st.pyplot(fig)
-
-    def plot_heatmap(data, index, value, title, cmap, figsize=(8, 8)):
-        fig, ax = plt.subplots(figsize=figsize)
-        sns.heatmap(
-            data.pivot_table(index=index, values=value, aggfunc="sum"),
-            cmap=cmap,
-            annot=True,
-            fmt=".0f",
-            linewidths=0.5,
-            cbar_kws={"label": value},
-            ax=ax,
-        )
-        ax.set_title(title, fontsize=14)
-        st.pyplot(fig)
-
     # Age Distribution
     st.subheader("📊 Age Distribution")
-    plot_bar(age_data, "Viewer age", "Views (%)", "Age Group Distribution of Views", "viridis")
+    plot_bar(age_data, "Viewer age", "Views (%)", "Age Group Distribution of Views", "viridis", figsize=(5, 3))
 
     # Gender Distribution
     st.subheader("👩‍💼👨‍💼 Gender Distribution")
-    plot_bar(gender_data, "Viewer gender", "Views (%)", "Gender Distribution of Views", "coolwarm")
+    plot_bar(gender_data, "Viewer gender", "Views (%)", "Gender Distribution of Views", "coolwarm", figsize=(5, 3))
 
     # Geographic Location
     st.subheader("🌍 Geographic Location")
@@ -112,16 +112,16 @@ with tabs[0]:
     # Top Cities by Views
     st.markdown("### 🌆 Top Cities by Views")
     top_cities = cities_data.sort_values(by="Views", ascending=False).head(10)
-    plot_bar(top_cities, "Views", "City name", "Top 10 Cities by Views", "mako", figsize=(10, 5), xlabel="Views", ylabel="City")
+    plot_bar(top_cities, "Views", "City name", "Top 10 Cities by Views", "mako", figsize=(6, 4), xlabel="Views", ylabel="City")
 
     # Heatmaps
     st.markdown("### 🗺️ Heatmaps")
-    plot_heatmap(cities_data.sort_values(by="Views", ascending=False).head(20), "City name", "Views", "Heatmap of Views by City", "Blues")
-    plot_heatmap(cities_data.sort_values(by="Watch time (hours)", ascending=False).head(20), "City name", "Watch time (hours)", "Heatmap of Watch Time by City", "Greens")
+    plot_heatmap(cities_data.sort_values(by="Views", ascending=False).head(20), "City name", "Views", "Heatmap of Views by City", "Blues", figsize=(6, 6))
+    plot_heatmap(cities_data.sort_values(by="Watch time (hours)", ascending=False).head(20), "City name", "Watch time (hours)", "Heatmap of Watch Time by City", "Greens", figsize=(6, 6))
 
     # Subscription Data
     st.subheader("🔔 Subscription Status")
-    plot_bar(subscription_data, "Subscription status", "Views", "Views by Subscription Status", "Set2")
+    plot_bar(subscription_data, "Subscription status", "Views", "Views by Subscription Status", "Set2", figsize=(5, 3))
 
 # Tab 2: Content Performance Analysis
 with tabs[1]:
@@ -165,7 +165,7 @@ with tabs[1]:
 
     # Total Views by Category
     st.subheader("📊 Total Views by Category")
-    plot_bar(category_summary, "Views", "Category", "Total Views by Category", "viridis", figsize=(10, 5), xlabel="Total Views", ylabel="Category")
+    plot_bar(category_summary, "Views", "Category", "Total Views by Category", "viridis", figsize=(6, 4), xlabel="Total Views", ylabel="Category")
 
     # Category Insights
     st.subheader("💡 Category Insights")
