@@ -6,14 +6,14 @@ import matplotlib.pyplot as plt
 # Page Configuration
 st.set_page_config(page_title="YouTube Analytics & Insights", page_icon="📊", layout="wide")
 
-# Custom CSS for Centered Content and Tabs
+# Custom CSS for Layout
 st.markdown(
     """
     <style>
         .block-container {
-            max-width: 900px; /* Restrict content width */
-            margin: auto;     /* Center content */
-            padding: 2rem;    /* Add padding around content */
+            max-width: 1000px; /* Set max width for content */
+            margin: auto;
+            padding: 2rem;
         }
         h1 {
             text-align: center;
@@ -45,12 +45,26 @@ urls = {
 }
 
 # Helper Functions for Visualizations
-def plot_bar(data, x, y, title, palette, figsize=(6, 4), xlabel=None, ylabel=None):
+def plot_bar(data, x, y, title, palette, figsize=(10, 5), xlabel=None, ylabel=None):
     fig, ax = plt.subplots(figsize=figsize)
     sns.barplot(data=data, x=x, y=y, palette=palette, ax=ax)
     ax.set_title(title, fontsize=14)
     if xlabel: ax.set_xlabel(xlabel)
     if ylabel: ax.set_ylabel(ylabel)
+    st.pyplot(fig)
+
+def plot_heatmap(data, index, value, title, cmap, figsize=(10, 6)):
+    fig, ax = plt.subplots(figsize=figsize)
+    sns.heatmap(
+        data.pivot_table(index=index, values=value, aggfunc="sum"),
+        cmap=cmap,
+        annot=True,
+        fmt=".0f",
+        linewidths=0.5,
+        cbar_kws={"label": value},
+        ax=ax,
+    )
+    ax.set_title(title, fontsize=14)
     st.pyplot(fig)
 
 # Tab 1: YouTube Audience Insights
@@ -83,7 +97,25 @@ with tabs[0]:
     # Top Cities by Views
     st.subheader("🌆 Top Cities by Views")
     top_cities = cities_data.sort_values(by="Views", ascending=False).head(10)
-    plot_bar(top_cities, "Views", "City name", "Top 10 Cities by Views", "mako", figsize=(6, 4), xlabel="Views", ylabel="City")
+    plot_bar(top_cities, "Views", "City name", "Top 10 Cities by Views", "mako", xlabel="Views", ylabel="City")
+
+    # Geographic Location - Search Feature
+    st.subheader("🌍 Search by City")
+    city_search = st.text_input("Enter a City (e.g., New York, London):").strip()
+    if city_search:
+        city_results = cities_data[cities_data["City name"].str.contains(city_search, case=False, na=False)]
+        if not city_results.empty:
+            st.write("**City Search Results:**")
+            st.write(city_results.drop(columns=["Cities"], errors="ignore"))
+        else:
+            st.warning("No results found for the city.")
+
+    # Heatmaps
+    st.subheader("🗺️ Heatmap of Views by City")
+    plot_heatmap(cities_data.sort_values(by="Views", ascending=False).head(20), "City name", "Views", "Views by City", "Blues")
+
+    st.subheader("⏱️ Heatmap of Watch Time by City")
+    plot_heatmap(cities_data.sort_values(by="Watch time (hours)", ascending=False).head(20), "City name", "Watch time (hours)", "Watch Time by City", "Greens")
 
 # Tab 2: Content Performance Analysis
 with tabs[1]:
@@ -126,7 +158,7 @@ with tabs[1]:
 
     # Total Views by Category
     st.subheader("📊 Total Views by Category")
-    plot_bar(category_summary, "Views", "Category", "Total Views by Category", "viridis", figsize=(6, 4), xlabel="Total Views", ylabel="Category")
+    plot_bar(category_summary, "Views", "Category", "Total Views by Category", "viridis", xlabel="Total Views", ylabel="Category")
 
     # Insights
     st.subheader("💡 Category Insights")
@@ -134,3 +166,21 @@ with tabs[1]:
     highest_ctr = category_summary.loc[category_summary["Impressions click-through rate (%)"].idxmax()]
     st.write(f"- **Most viewed category:** {most_viewed['Category']} with {most_viewed['Views']:.0f} views.")
     st.write(f"- **Highest average CTR:** {highest_ctr['Category']} with {highest_ctr['Impressions click-through rate (%)']:.2f}% CTR.")
+
+    # Top Videos by Category
+    st.subheader("🎬 Top Videos by Category")
+    selected_category = st.selectbox("Select a Category:", category_summary["Category"].tolist())
+    if selected_category:
+        top_videos = content_data[content_data["Category"] == selected_category].sort_values(by="Views", ascending=False).head(10)
+        st.write(top_videos[["Video title", "Views", "Watch time (hours)", "Impressions click-through rate (%)"]])
+
+    # Search for Videos
+    st.subheader("🔍 Search for a Specific Video")
+    video_search = st.text_input("Enter a video title or keyword:")
+    if video_search:
+        search_results = content_data[content_data["Video title"].str.contains(video_search, case=False, na=False)]
+        if not search_results.empty:
+            st.write("Search Results:")
+            st.write(search_results[["Video title", "Category", "Views", "Watch time (hours)", "Impressions click-through rate (%)"]])
+        else:
+            st.warning("No results found.")
