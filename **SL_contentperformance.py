@@ -3,8 +3,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import streamlit as st
 
-# Title
-st.title("YouTube Content Categories Analysis")
+# Overview
+st.title("Content Performance Analysis")
+st.header("Overview of All Categories")
 
 # Load Dataset
 @st.cache_data
