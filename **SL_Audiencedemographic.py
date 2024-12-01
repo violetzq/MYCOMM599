@@ -66,8 +66,6 @@ city_search_term = st.text_input("Search for City (e.g., New York, London):").st
 if city_search_term:
     filtered_city_data = cities_data[cities_data["City name"].str.contains(city_search_term, case=False, na=False)]
     if not filtered_city_data.empty:
-        # Display the results without the "Cities" column
-        filtered_city_data = filtered_city_data.drop(columns=["City name"])
         st.write("**City Search Results:**")
         st.write(filtered_city_data)
     else:
