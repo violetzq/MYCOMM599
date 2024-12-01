@@ -11,22 +11,20 @@ st.set_page_config(page_title="Programming Strategy Insights", page_icon="📊",
 def load_content_data():
     url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/DangerTV_Content.csv"
     try:
-        # Try parsing with the assumed date column "Upload date"
-        return pd.read_csv(url, parse_dates=["Upload date"])  # Replace with correct column if needed
+        # Parse "Video publish time" as the date column
+        return pd.read_csv(url, parse_dates=["Video publish time"])
     except ValueError:
-        # Fallback: Load without parsing dates if "Upload date" doesn't exist
+        # Fallback: Load without parsing dates if "Video publish time" doesn't exist
         data = pd.read_csv(url)
-        st.warning("The column 'Upload date' was not found. Proceeding without date-based analysis.")
+        st.warning("The column 'Video publish time' was not found. Proceeding without date-based analysis.")
         return data
 
 # Load Data
 data = load_content_data()
 
-# Inspect Columns and Handle Missing Date Column
-if "Upload date" not in data.columns:
-    st.warning("Date-based analysis is unavailable because the 'Upload date' column is missing.")
-else:
-    data["Day of Week"] = data["Upload date"].dt.day_name()  # Extract day of the week
+# Data Preparation
+if "Video publish time" in data.columns:
+    data["Day of Week"] = data["Video publish time"].dt.day_name()  # Extract day of the week
     average_views_day = data.groupby("Day of Week")["Views"].mean().reindex(
         ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     )  # Average views by day of week
