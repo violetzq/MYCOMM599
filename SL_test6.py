@@ -182,11 +182,22 @@ with tabs[1]:
     st.write(f"- The category with the **highest total views** is **{top_category_views['Category']}** with **{top_category_views['Views']:.0f} views**.")
     st.write(f"- The category with the **highest average CTR** is **{top_category_ctr['Category']}** with **{top_category_ctr['Impressions click-through rate (%)']:.2f}% CTR**.")
 
-    # Top Videos by Category
+   # Top Videos by Category
     st.subheader("🎬 Top Videos by Category")
     selected_category = st.selectbox("Select a Category:", category_summary['Category'].tolist())
     if selected_category:
         filtered_data = data[data['Category'] == selected_category]
         st.write(f"**Top 10 Videos in {selected_category} Category:**")
         top_videos = filtered_data.sort_values(by='Views', ascending=False).head(10)
-        st.write(top_videos[['Video title', 'Views', '
+        st.write(top_videos[['Video title', 'Views', 'Watch time (hours)', 'Impressions click-through rate (%)']])
+
+# Search Functionality
+    st.header("🔍 Search for a Specific Video")
+    search_query = st.text_input("Enter a video title or keyword:")
+    if search_query:
+        search_results = data[data['Video title'].str.contains(search_query, case=False, na=False)]
+        if not search_results.empty:
+            st.write("Search Results:")
+            st.dataframe(search_results[['Video title', 'Category', 'Views', 'Watch time (hours)', 'Impressions click-through rate (%)']])
+        else:
+            st.warning("No results found for your search query.")
