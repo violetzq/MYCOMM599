@@ -27,30 +27,20 @@ if "Video publish time" in data.columns:
         ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     )
 
-# Custom CSS for Center Alignment and Spacing
+# Custom CSS for Centered and Fixed Width Content
 st.markdown("""
     <style>
     .block-container {
-        padding: 2rem 4rem;
-    }
-    .center {
-        text-align: center;
-    }
-    .section {
-        margin: 3rem auto;
-        padding: 2rem;
-        background-color: #f9f9f9;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        width: 80%;
+        max-width: 900px;  /* Restrict content width */
+        margin: auto;      /* Center content */
+        padding: 2rem;     /* Add padding around content */
     }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="center"><h1>📊 Programming Strategy Insights</h1></div>', unsafe_allow_html=True)
+st.title("📊 Programming Strategy Insights")
 
 # Baseline Analysis Section
-st.markdown('<div class="section">', unsafe_allow_html=True)
 st.subheader("Baseline Viewership Performance")
 if "Day of Week" in data.columns:
     fig, ax = plt.subplots(figsize=(6, 4))  # Reduced size for better fit
@@ -62,10 +52,8 @@ if "Day of Week" in data.columns:
     ax.set_xlabel("Day of Week")
     plt.xticks(rotation=45)
     st.pyplot(fig)
-st.markdown('</div>', unsafe_allow_html=True)
 
 # Title-Specific Comparison Section
-st.markdown('<div class="section">', unsafe_allow_html=True)
 st.subheader("Compare Specific Titles to the Baseline")
 if "Video title" in data.columns:
     title_list = data["Video title"].unique().tolist()
@@ -87,10 +75,8 @@ if "Video title" in data.columns:
             ax.set_xlabel("Day of Week")
             plt.xticks(rotation=45)
             st.pyplot(fig)
-st.markdown('</div>', unsafe_allow_html=True)
 
 # Recommendations Section
-st.markdown('<div class="section">', unsafe_allow_html=True)
 st.subheader("💡 Recommendations Based on Comparison")
 if "Video title" in data.columns and selected_title:
     if not title_data.empty:
@@ -107,4 +93,3 @@ if "Video title" in data.columns and selected_title:
             )
     else:
         st.write("No data available for the selected title.")
-st.markdown('</div>', unsafe_allow_html=True)
