@@ -83,3 +83,14 @@ if selected_category:
         st.write(top_videos[['Video title', 'Views', 'Watch time (hours)', 'Impressions click-through rate (%)']])
     else:
         st.warning(f"No videos found in category {selected_category}.")
+        
+# Search Functionality
+st.header("Search for a Specific Video")
+search_query = st.text_input("Enter a video title or keyword:")
+if search_query:
+    search_results = data[data['Video title'].str.contains(search_query, case=False, na=False)]
+    if not search_results.empty:
+        st.write("Search Results:")
+        st.dataframe(search_results[['Video title', 'Category', 'Views', 'Watch time (hours)', 'Impressions click-through rate (%)']])
+    else:
+        st.write("No results found for your search query.")
