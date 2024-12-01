@@ -28,10 +28,22 @@ if "Video publish time" in data.columns:
     )
 
 # Layout: Add Padding and Spacing
-st.markdown("<style> .block-container { padding: 2rem 4rem; } </style>", unsafe_allow_html=True)
+st.markdown("""
+    <style>
+    .block-container {
+        padding: 3rem 5rem;
+    }
+    .section {
+        margin-top: 3rem;
+        margin-bottom: 3rem;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("📊 Programming Strategy Insights")
 
-# Baseline Analysis and Comparison
+# Baseline Analysis
+st.markdown('<div class="section">', unsafe_allow_html=True)
 st.subheader("Baseline Viewership Performance")
 if "Day of Week" in data.columns:
     fig, ax = plt.subplots(figsize=(8, 5))
@@ -43,8 +55,10 @@ if "Day of Week" in data.columns:
     ax.set_xlabel("Day of Week")
     plt.xticks(rotation=45)
     st.pyplot(fig)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Title-Specific Comparison
+st.markdown('<div class="section">', unsafe_allow_html=True)
 st.subheader("Compare Specific Titles to the Baseline")
 if "Video title" in data.columns:
     title_list = data["Video title"].unique().tolist()
@@ -66,8 +80,10 @@ if "Video title" in data.columns:
             ax.set_xlabel("Day of Week")
             plt.xticks(rotation=45)
             st.pyplot(fig)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Recommendations Section
+st.markdown('<div class="section">', unsafe_allow_html=True)
 st.subheader("💡 Recommendations Based on Comparison")
 if "Video title" in data.columns and selected_title:
     if not title_data.empty:
@@ -84,3 +100,4 @@ if "Video title" in data.columns and selected_title:
             )
     else:
         st.write("No data available for the selected title.")
+st.markdown('</div>', unsafe_allow_html=True)
