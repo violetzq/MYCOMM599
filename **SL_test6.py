@@ -99,6 +99,13 @@ with tabs[0]:
     top_cities = cities_data.sort_values(by="Views", ascending=False).head(10)
     plot_bar(top_cities, "Views", "City name", "Top 10 Cities by Views", "mako", xlabel="Views", ylabel="City")
 
+    # Heatmaps
+    st.subheader("🗺️ Heatmap of Views by City")
+    plot_heatmap(cities_data.sort_values(by="Views", ascending=False).head(20), "City name", "Views", "Views by City", "Blues")
+
+    st.subheader("⏱️ Heatmap of Watch Time by City")
+    plot_heatmap(cities_data.sort_values(by="Watch time (hours)", ascending=False).head(20), "City name", "Watch time (hours)", "Watch Time by City", "Greens")
+
     # Geographic Location - Search Feature
     st.subheader("🌍 Search by City")
     city_search = st.text_input("Enter a City (e.g., New York, London):").strip()
@@ -109,13 +116,6 @@ with tabs[0]:
             st.write(city_results.drop(columns=["Cities"], errors="ignore"))
         else:
             st.warning("No results found for the city.")
-
-    # Heatmaps
-    st.subheader("🗺️ Heatmap of Views by City")
-    plot_heatmap(cities_data.sort_values(by="Views", ascending=False).head(20), "City name", "Views", "Views by City", "Blues")
-
-    st.subheader("⏱️ Heatmap of Watch Time by City")
-    plot_heatmap(cities_data.sort_values(by="Watch time (hours)", ascending=False).head(20), "City name", "Watch time (hours)", "Watch Time by City", "Greens")
 
 # Tab 2: Content Performance Analysis
 with tabs[1]:
