@@ -42,7 +42,8 @@ fig_views = px.bar(
     labels={"x": "Day of Week", "Views": "Average Views"},
     text_auto=True
 )
-fig_views.add_hline(y=baseline_views, line_dash="dash", line_color="red", annotation_text="Daily Views Baseline")
+fig_views.add_hline(y=baseline_views, line_dash="dash", line_color="red", 
+    annotation_text=f"Daily Views Baseline ({baseline_views:.0f})", annotation_position="bottom right")
 
 fig_watch_time = px.bar(
     average_metrics_day,
@@ -52,7 +53,8 @@ fig_watch_time = px.bar(
     labels={"x": "Day of Week", "Watch time (hours)": "Average Watch Time (hours)"},
     text_auto=True
 )
-fig_watch_time.add_hline(y=baseline_watch_time, line_dash="dash", line_color="red", annotation_text="Watch Time Baseline")
+fig_watch_time.add_hline(y=baseline_watch_time, line_dash="dash", line_color="red", 
+    annotation_text=f"Watch Time Baseline ({baseline_watch_time:.0f} hours)", annotation_position="bottom right")
 
 fig_revenue = px.bar(
     average_metrics_day,
@@ -62,7 +64,8 @@ fig_revenue = px.bar(
     labels={"x": "Day of Week", "Estimated revenue (USD)": "Average Revenue (USD)"},
     text_auto=True
 )
-fig_revenue.add_hline(y=baseline_revenue, line_dash="dash", line_color="red", annotation_text="Revenue Baseline")
+fig_revenue.add_hline(y=baseline_revenue, line_dash="dash", line_color="red", 
+    annotation_text=f"Revenue Baseline (${baseline_revenue:.2f})", annotation_position="bottom right")
 
 # Display interactive plots
 st.plotly_chart(fig_views, use_container_width=True)
