@@ -107,6 +107,24 @@ if selected_video:
     else:
         st.warning(f"The video has **below average revenue**, falling short of the baseline by ${baseline_revenue - video_revenue:.2f}.")
 
+    # Plotting metrics for selected video
+    metrics = ["Video views", "Watch time (hours)", "Estimated revenue (USD)"]
+    metric_values = [video_total_views, video_watch_time, video_revenue]
+    baseline_values = [baseline_video_views, baseline_watch_time, baseline_revenue]
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    bar_width = 0.35
+    indices = range(len(metrics))
+
+    ax.bar(indices, metric_values, bar_width, label="Selected Video", color="blue")
+    ax.bar([i + bar_width for i in indices], baseline_values, bar_width, label="Baseline", color="gray")
+
+    ax.set_xticks([i + bar_width / 2 for i in indices])
+    ax.set_xticklabels(metrics, rotation=45)
+    ax.legend()
+    ax.set_title(f"Performance Metrics for '{selected_video}' vs. Baseline")
+    st.pyplot(fig)
+
 # Section 3: Recommendations Based on Insights
 st.subheader("💡 Recommendations Based on Metrics")
 st.write("- **Highest Performing Days**: Based on average views and revenue, Thursdays and Sundays stand out as the best days to release content.")
