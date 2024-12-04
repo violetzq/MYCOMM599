@@ -4,26 +4,35 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 # Page Configuration
-st.set_page_config(page_title="DangerTV Programming Strategy", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Programming Strategy Insights", page_icon="📊", layout="wide")
 
 # Load Dataset
 @st.cache_data
 def load_content_data():
-    url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/dates%20data.csv"
-    return pd.read_csv(url)
+    url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/dates%20data.csv"  # Corrected raw link
+    try:
+        return pd.read_csv(url, encoding="utf-8")  # Use utf-8 encoding
+    except UnicodeDecodeError:
+        st.warning("UTF-8 encoding failed. Trying 'latin1' encoding.")
+        return pd.read_csv(url, encoding="latin1")  # Fallback to latin1 if utf-8 fails
 
 # Load Data
 data = load_content_data()
 
 # Data Preparation
-data["Date"] = pd.to_datetime(data["Date"])  # Ensure 'Date' is in datetime format
-data["Day of Week"] = data["Date"].dt.day_name()  # Extract day of the week
+if "Date" in data.columns:
+    # Ensure 'Date' is a datetime object
+    data["Date"] = pd.to_datetime(data["Date"], errors="coerce")
+    data.dropna(subset=["Date"], inplace=True)  # Drop invalid dates
+    data["Day of Week"] = data["Date"].dt.day_name()
 
-# Calculate Baselines
-baseline_views = data["Views"].mean()
-baseline_video_views = data["Video views"].mean()
-baseline_watch_time = data["Watch time (hours)"].mean()
-baseline_revenue = data["Estimated revenue (USD)"].mean()
+    # Calculate baseline metrics for day-of-week analysis
+    day_of_week_metrics = data.groupby("Day of Week").agg({
+        "Views": "mean",
+        "Watch time (hours)": "mean",
+        "Average view duration": "first",  # Assuming this remains constant for a day
+        "Estimated revenue (USD)": "mean"
+    }).reindex(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])  # Ensure correct day order
 
 # Custom CSS for Centered and Fixed Width Content
 st.markdown("""
@@ -36,77 +45,58 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 DangerTV Programming Strategy Insights")
+st.title("📊 Programming Strategy Insights")
 
-# Section 1: Day of Week Analysis
-st.subheader("📅 Baseline Performance by Day of Week")
-average_metrics_day = data.groupby("Day of Week").mean().reindex(
-    ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-)
+# Baseline Analysis Section
+st.subheader("Baseline Metrics by Day of the Week")
+if "Day of Week" in data.columns:
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.barplot(x=day_of_week_metrics.index, y=day_of_week_metrics["Views"], palette="viridis", ax=ax)
+    ax.axhline(data["Views"].mean(), color="red", linestyle="--", label="Overall Baseline (Views)")
+    ax.set_title("Average Views by Day of the Week")
+    ax.set_ylabel("Average Views")
+    ax.set_xlabel("Day of Week")
+    plt.xticks(rotation=45)
+    ax.legend()
+    st.pyplot(fig)
 
-fig, ax = plt.subplots(3, 1, figsize=(8, 12), sharex=True)
+    st.write("**Detailed Metrics by Day of the Week:**")
+    st.dataframe(day_of_week_metrics)
 
-# Views
-sns.barplot(x=average_metrics_day.index, y=average_metrics_day["Views"], palette="viridis", ax=ax[0])
-ax[0].axhline(baseline_views, color="red", linestyle="--", label="Daily Views Baseline")
-ax[0].legend()
-ax[0].set_title("Average Views by Day of Week", fontsize=12)
-ax[0].set_ylabel("Views")
+# Video-Level Analysis Section
+st.subheader("Video Performance Analysis")
+if "Video title" in data.columns:
+    video_list = data["Video title"].unique().tolist()
+    selected_video = st.selectbox("Select a Video Title:", video_list)
 
-# Watch time
-sns.barplot(x=average_metrics_day.index, y=average_metrics_day["Watch time (hours)"], palette="Blues", ax=ax[1])
-ax[1].axhline(baseline_watch_time, color="red", linestyle="--", label="Watch Time Baseline")
-ax[1].legend()
-ax[1].set_title("Average Watch Time (hours) by Day of Week", fontsize=12)
-ax[1].set_ylabel("Watch Time (hours)")
+    if selected_video:
+        video_data = data[data["Video title"] == selected_video]
 
-# Revenue
-sns.barplot(x=average_metrics_day.index, y=average_metrics_day["Estimated revenue (USD)"], palette="Oranges", ax=ax[2])
-ax[2].axhline(baseline_revenue, color="red", linestyle="--", label="Revenue Baseline")
-ax[2].legend()
-ax[2].set_title("Average Revenue (USD) by Day of Week", fontsize=12)
-ax[2].set_ylabel("Estimated Revenue (USD)")
+        # Calculate video-specific baseline metrics
+        video_avg_views = video_data["Views"].mean()
+        video_avg_revenue = video_data["Estimated revenue (USD)"].mean()
+        video_avg_watch_time = video_data["Watch time (hours)"].mean()
 
-plt.xticks(rotation=45)
-st.pyplot(fig)
+        st.write(f"**Average Views for '{selected_video}':** {video_avg_views:.2f}")
+        st.write(f"**Average Revenue for '{selected_video}':** ${video_avg_revenue:.2f}")
+        st.write(f"**Average Watch Time for '{selected_video}':** {video_avg_watch_time:.2f} hours")
 
-# Section 2: Video Analysis
-st.subheader("🎥 Video Performance Insights")
-selected_video = st.selectbox("Select a Video Title:", data["Video title"].unique())
+        # Compare to overall baseline
+        overall_avg_views = data["Views"].mean()
+        overall_avg_revenue = data["Estimated revenue (USD)"].mean()
 
-if selected_video:
-    video_data = data[data["Video title"] == selected_video]
-    video_total_views = video_data["Video views"].iloc[0]
-    video_watch_time = video_data["Watch time (hours)"].iloc[0]
-    video_revenue = video_data["Estimated revenue (USD)"].iloc[0]
-    
-    st.write(f"### Total Views for **{selected_video}**: {video_total_views:.2f}")
-    st.write(f"### Total Watch Time: {video_watch_time:.2f} hours")
-    st.write(f"### Total Revenue: ${video_revenue:.2f}")
-    
-    # Comparison with baselines
-    st.write(f"### Video Views Baseline: {baseline_video_views:.2f}")
-    st.write(f"### Watch Time Baseline: {baseline_watch_time:.2f} hours")
-    st.write(f"### Revenue Baseline: ${baseline_revenue:.2f}")
-    
-    if video_total_views > baseline_video_views:
-        st.success(f"The video **{selected_video}** is performing **above average in views**, exceeding the baseline by {video_total_views - baseline_video_views:.2f} views.")
-    else:
-        st.warning(f"The video **{selected_video}** is performing **below average in views**, falling short of the baseline by {baseline_video_views - video_total_views:.2f} views.")
-    
-    if video_watch_time > baseline_watch_time:
-        st.success(f"The video has **above average watch time**, exceeding the baseline by {video_watch_time - baseline_watch_time:.2f} hours.")
-    else:
-        st.warning(f"The video has **below average watch time**, falling short of the baseline by {baseline_watch_time - video_watch_time:.2f} hours.")
-    
-    if video_revenue > baseline_revenue:
-        st.success(f"The video has **above average revenue**, exceeding the baseline by ${video_revenue - baseline_revenue:.2f}.")
-    else:
-        st.warning(f"The video has **below average revenue**, falling short of the baseline by ${baseline_revenue - video_revenue:.2f}.")
+        if video_avg_views > overall_avg_views:
+            st.success(f"'{selected_video}' is performing **above baseline** for views.")
+        else:
+            st.warning(f"'{selected_video}' is performing **below baseline** for views.")
 
-# Section 3: Recommendations Based on Insights
+        if video_avg_revenue > overall_avg_revenue:
+            st.success(f"'{selected_video}' is generating **above baseline revenue**.")
+        else:
+            st.warning(f"'{selected_video}' is generating **below baseline revenue**.")
+
+# Recommendations Section
 st.subheader("💡 Recommendations Based on Metrics")
-st.write("- **Highest Performing Days**: Based on average views and revenue, Thursdays and Sundays stand out as the best days to release content.")
-st.write("- **Revenue Insights**: To maximize revenue, focus on boosting engagement on high-performing days.")
-st.write("- **Video-Specific Strategies**: Optimize and promote videos performing below the baselines to increase their overall impact.")
-st.write("- **Watch Time Focus**: Improve viewer retention strategies to boost watch time, as longer engagement correlates with higher revenue.")
+st.write("- **Highest Performing Days:** Focus on publishing content on days with the highest views and revenue.")
+st.write("- **Revenue Insights:** Optimize content release schedules to align with peak revenue days.")
+st.write("- **Engagement Analysis:** Use watch time and view duration metrics to refine content strategy.")
