@@ -19,6 +19,12 @@ data = load_content_data()
 data["Date"] = pd.to_datetime(data["Date"])  # Ensure 'Date' is in datetime format
 data["Day of Week"] = data["Date"].dt.day_name()  # Extract day of the week
 
+# Filter for numeric columns for grouping
+numeric_columns = ["Views", "Watch time (hours)", "Estimated revenue (USD)"]
+average_metrics_day = data.groupby("Day of Week")[numeric_columns].mean().reindex(
+    ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+)
+
 # Calculate Baselines
 baseline_views = data["Views"].mean()
 baseline_video_views = data["Video views"].mean()
@@ -40,9 +46,6 @@ st.title("📊 DangerTV Programming Strategy Insights")
 
 # Section 1: Day of Week Analysis
 st.subheader("📅 Baseline Performance by Day of Week")
-average_metrics_day = data.groupby("Day of Week").mean().reindex(
-    ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-)
 
 fig, ax = plt.subplots(3, 1, figsize=(8, 12), sharex=True)
 
