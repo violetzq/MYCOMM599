@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
+import plotly.express as px
 
 # Page Configuration
 st.set_page_config(page_title="DangerTV Programming Strategy", page_icon="📊", layout="wide")
@@ -19,61 +18,58 @@ data = load_content_data()
 data["Date"] = pd.to_datetime(data["Date"])  # Ensure 'Date' is in datetime format
 data["Day of Week"] = data["Date"].dt.day_name()  # Extract day of the week
 
-# Filter for numeric columns for grouping
-numeric_columns = ["Views", "Watch time (hours)", "Estimated revenue (USD)"]
-average_metrics_day = data.groupby("Day of Week")[numeric_columns].mean().reindex(
-    ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-)
-
 # Calculate Baselines
 baseline_views = data["Views"].mean()
 baseline_video_views = data["Video views"].mean()
 baseline_watch_time = data["Watch time (hours)"].mean()
 baseline_revenue = data["Estimated revenue (USD)"].mean()
 
-# Custom CSS for Centered and Fixed Width Content
-st.markdown("""
-    <style>
-    .block-container {
-        max-width: 900px;  /* Restrict content width */
-        margin: auto;      /* Center content */
-        padding: 2rem;     /* Add padding around content */
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 st.title("📊 DangerTV Programming Strategy Insights")
 
-# Section 1: Day of Week Analysis
+# Section 1: Interactive Day of Week Analysis
 st.subheader("📅 Baseline Performance by Day of Week")
 
-fig, ax = plt.subplots(3, 1, figsize=(8, 12), sharex=True)
+average_metrics_day = data.groupby("Day of Week")[["Views", "Watch time (hours)", "Estimated revenue (USD)"]].mean().reindex(
+    ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+)
 
-# Views
-sns.barplot(x=average_metrics_day.index, y=average_metrics_day["Views"], palette="viridis", ax=ax[0])
-ax[0].axhline(baseline_views, color="red", linestyle="--", label="Daily Views Baseline")
-ax[0].legend()
-ax[0].set_title("Average Views by Day of Week", fontsize=12)
-ax[0].set_ylabel("Views")
+# Interactive charts using Plotly
+fig_views = px.bar(
+    average_metrics_day,
+    x=average_metrics_day.index,
+    y="Views",
+    title="Average Views by Day of Week",
+    labels={"x": "Day of Week", "Views": "Average Views"},
+    text_auto=True
+)
+fig_views.add_hline(y=baseline_views, line_dash="dash", line_color="red", annotation_text="Daily Views Baseline")
 
-# Watch time
-sns.barplot(x=average_metrics_day.index, y=average_metrics_day["Watch time (hours)"], palette="Blues", ax=ax[1])
-ax[1].axhline(baseline_watch_time, color="red", linestyle="--", label="Watch Time Baseline")
-ax[1].legend()
-ax[1].set_title("Average Watch Time (hours) by Day of Week", fontsize=12)
-ax[1].set_ylabel("Watch Time (hours)")
+fig_watch_time = px.bar(
+    average_metrics_day,
+    x=average_metrics_day.index,
+    y="Watch time (hours)",
+    title="Average Watch Time (hours) by Day of Week",
+    labels={"x": "Day of Week", "Watch time (hours)": "Average Watch Time (hours)"},
+    text_auto=True
+)
+fig_watch_time.add_hline(y=baseline_watch_time, line_dash="dash", line_color="red", annotation_text="Watch Time Baseline")
 
-# Revenue
-sns.barplot(x=average_metrics_day.index, y=average_metrics_day["Estimated revenue (USD)"], palette="Oranges", ax=ax[2])
-ax[2].axhline(baseline_revenue, color="red", linestyle="--", label="Revenue Baseline")
-ax[2].legend()
-ax[2].set_title("Average Revenue (USD) by Day of Week", fontsize=12)
-ax[2].set_ylabel("Estimated Revenue (USD)")
+fig_revenue = px.bar(
+    average_metrics_day,
+    x=average_metrics_day.index,
+    y="Estimated revenue (USD)",
+    title="Average Revenue (USD) by Day of Week",
+    labels={"x": "Day of Week", "Estimated revenue (USD)": "Average Revenue (USD)"},
+    text_auto=True
+)
+fig_revenue.add_hline(y=baseline_revenue, line_dash="dash", line_color="red", annotation_text="Revenue Baseline")
 
-plt.xticks(rotation=45)
-st.pyplot(fig)
+# Display interactive plots
+st.plotly_chart(fig_views, use_container_width=True)
+st.plotly_chart(fig_watch_time, use_container_width=True)
+st.plotly_chart(fig_revenue, use_container_width=True)
 
-# Section 2: Video Analysis
+# Section 2: Video Analysis with CSV Download
 st.subheader("🎥 Video Performance Insights")
 selected_video = st.selectbox("Select a Video Title:", data["Video title"].unique())
 
@@ -92,38 +88,30 @@ if selected_video:
     st.write(f"### Watch Time Baseline: {baseline_watch_time:.2f} hours")
     st.write(f"### Revenue Baseline: ${baseline_revenue:.2f}")
     
-    if video_total_views > baseline_video_views:
-        st.success(f"The video **{selected_video}** is performing **above average in views**, exceeding the baseline by {video_total_views - baseline_video_views:.2f} views.")
-    else:
-        st.warning(f"The video **{selected_video}** is performing **below average in views**, falling short of the baseline by {baseline_video_views - video_total_views:.2f} views.")
-    
-    if video_watch_time > baseline_watch_time:
-        st.success(f"The video has **above average watch time**, exceeding the baseline by {video_watch_time - baseline_watch_time:.2f} hours.")
-    else:
-        st.warning(f"The video has **below average watch time**, falling short of the baseline by {baseline_watch_time - video_watch_time:.2f} hours.")
-    
-    if video_revenue > baseline_revenue:
-        st.success(f"The video has **above average revenue**, exceeding the baseline by ${video_revenue - baseline_revenue:.2f}.")
-    else:
-        st.warning(f"The video has **below average revenue**, falling short of the baseline by ${baseline_revenue - video_revenue:.2f}.")
+    # Add interactive chart for selected video
+    video_metrics = pd.DataFrame({
+        "Metric": ["Video views", "Watch time (hours)", "Estimated revenue (USD)"],
+        "Selected Video": [video_total_views, video_watch_time, video_revenue],
+        "Baseline": [baseline_video_views, baseline_watch_time, baseline_revenue]
+    })
 
-    # Plotting metrics for selected video
-    metrics = ["Video views", "Watch time (hours)", "Estimated revenue (USD)"]
-    metric_values = [video_total_views, video_watch_time, video_revenue]
-    baseline_values = [baseline_video_views, baseline_watch_time, baseline_revenue]
+    fig_video = px.bar(
+        video_metrics,
+        x="Metric",
+        y=["Selected Video", "Baseline"],
+        barmode="group",
+        title=f"Performance Metrics for '{selected_video}' vs. Baseline",
+        text_auto=True
+    )
+    st.plotly_chart(fig_video, use_container_width=True)
 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    bar_width = 0.35
-    indices = range(len(metrics))
-
-    ax.bar(indices, metric_values, bar_width, label="Selected Video", color="blue")
-    ax.bar([i + bar_width for i in indices], baseline_values, bar_width, label="Baseline", color="gray")
-
-    ax.set_xticks([i + bar_width / 2 for i in indices])
-    ax.set_xticklabels(metrics, rotation=45)
-    ax.legend()
-    ax.set_title(f"Performance Metrics for '{selected_video}' vs. Baseline")
-    st.pyplot(fig)
+    # Download button for CSV
+    st.download_button(
+        label="Download Selected Video Data as CSV",
+        data=video_data.to_csv(index=False),
+        file_name=f"{selected_video}_data.csv",
+        mime="text/csv"
+    )
 
 # Section 3: Recommendations Based on Insights
 st.subheader("💡 Recommendations Based on Metrics")
