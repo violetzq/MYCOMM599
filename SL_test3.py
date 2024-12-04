@@ -4,28 +4,24 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 # Page Configuration
-st.set_page_config(page_title="Programming Strategy Insights", page_icon="📊", layout="wide")
+st.set_page_config(page_title="DangerTV Programming Strategy", page_icon="📊", layout="wide")
 
 # Load Dataset
 @st.cache_data
-def load_daily_data():
-    url = "https://github.com/violetzq/MYCOMM599/blob/a17ead2e63166deb9b16b041ca49876fad3b36b0/dates%20data.csv?raw=true"
-    return pd.read_csv(url, parse_dates=["Date"])
+def load_content_data():
+    url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/dates%20data.csv"
+    return pd.read_csv(url)
 
 # Load Data
-data = load_daily_data()
+data = load_content_data()
 
 # Data Preparation
+data["Date"] = pd.to_datetime(data["Date"])  # Ensure 'Date' is in datetime format
 data["Day of Week"] = data["Date"].dt.day_name()  # Extract day of the week
-average_metrics_day = (
-    data.groupby("Day of Week")[["Views", "Watch time (hours)", "Estimated revenue (USD)"]]
-    .mean()
-    .reindex(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
-)
 
-# Add Baselines
-overall_baseline_views = data["Views"].mean()
-overall_baseline_revenue = data["Estimated revenue (USD)"].mean()
+# Calculate Baselines
+baseline_views = data["Views"].mean()  # Baseline for daily views
+baseline_video_views = data["Video views"].mean()  # Baseline for video views
 
 # Custom CSS for Centered and Fixed Width Content
 st.markdown("""
@@ -38,37 +34,44 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 Programming Strategy Insights")
+st.title("📊 DangerTV Programming Strategy Insights")
 
-# Baseline Analysis Section
-st.subheader("Baseline Metrics by Day of Week")
-fig, ax = plt.subplots(figsize=(8, 6))
-sns.barplot(x=average_metrics_day.index, y=average_metrics_day["Views"], palette="viridis", ax=ax)
-ax.axhline(overall_baseline_views, color="red", linestyle="--", label="Overall Baseline (Views)")
+# Section 1: Day of Week Analysis
+st.subheader("📅 Baseline Viewership Performance by Day of Week")
+average_views_day = data.groupby("Day of Week")["Views"].mean().reindex(
+    ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+)
+
+fig, ax = plt.subplots(figsize=(8, 4))
+sns.barplot(x=average_views_day.index, y=average_views_day.values, palette="viridis", ax=ax)
+ax.axhline(baseline_views, color="red", linestyle="--", label="Daily Views Baseline")
 ax.legend()
-ax.set_title("Average Views by Day of Week", fontsize=14)
+ax.set_title("Average Views by Day of Week", fontsize=12)
 ax.set_ylabel("Average Views")
 ax.set_xlabel("Day of Week")
 plt.xticks(rotation=45)
 st.pyplot(fig)
 
-# Revenue Insights Section
-st.subheader("Revenue Insights by Day of Week")
-fig, ax = plt.subplots(figsize=(8, 6))
-sns.barplot(x=average_metrics_day.index, y=average_metrics_day["Estimated revenue (USD)"], palette="coolwarm", ax=ax)
-ax.axhline(overall_baseline_revenue, color="red", linestyle="--", label="Overall Baseline (Revenue)")
-ax.legend()
-ax.set_title("Average Revenue by Day of Week", fontsize=14)
-ax.set_ylabel("Average Revenue (USD)")
-ax.set_xlabel("Day of Week")
-plt.xticks(rotation=45)
-st.pyplot(fig)
+# Section 2: Video Analysis
+st.subheader("🎥 Video Performance Insights")
+selected_video = st.selectbox("Select a Video Title:", data["Video title"].unique())
 
-# Recommendations Section
+if selected_video:
+    video_data = data[data["Video title"] == selected_video]
+    video_total_views = video_data["Video views"].iloc[0]  # Get total views for the video
+    
+    st.write(f"### Total Views for **{selected_video}**: {video_total_views:.2f}")
+    st.write(f"### Video Views Baseline: {baseline_video_views:.2f}")
+    
+    if video_total_views > baseline_video_views:
+        st.success(f"The video **{selected_video}** is performing **above average**, exceeding the baseline by {video_total_views - baseline_video_views:.2f} views.")
+        st.write("✅ **Recommendation**: Continue promoting this video as it is performing well!")
+    else:
+        st.warning(f"The video **{selected_video}** is performing **below average**, falling short of the baseline by {baseline_video_views - video_total_views:.2f} views.")
+        st.write("⚠️ **Recommendation**: Explore optimization opportunities for this video, such as improving its title or thumbnail.")
+
+# Section 3: Recommendations Based on Insights
 st.subheader("💡 Recommendations Based on Metrics")
-st.write(f"- **Highest Performing Days:** Based on average views, Thursdays and Sundays stand out as the best days to release content.")
-st.write(f"- **Revenue Insights:** To maximize revenue, focus on boosting engagement on {average_metrics_day['Estimated revenue (USD)'].idxmax()}.")
-
-# Summary Table
-st.subheader("Summary of Metrics by Day of Week")
-st.dataframe(average_metrics_day.reset_index())
+st.write("- **Highest Performing Days**: Based on average views, Thursdays and Sundays stand out as the best days to release content.")
+st.write("- **Revenue Insights**: To maximize revenue, focus on boosting engagement on Thursdays and Sundays.")
+st.write("- **Video-Specific Strategies**: Tailor promotional strategies for videos performing below the baseline.")
