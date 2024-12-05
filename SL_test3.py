@@ -77,44 +77,54 @@ st.subheader("🎥 Video Performance Insights")
 selected_video = st.selectbox("Select a Video Title:", data["Video title"].unique())
 
 if selected_video:
+    # Clean video titles in the DataFrame to avoid mismatch
+    data["Video title"] = data["Video title"].str.strip()
+    selected_video = selected_video.strip()
+    
+    # Filter the data for the selected video
     video_data = data[data["Video title"] == selected_video]
-    video_total_views = video_data["Video views"].iloc[0]
-    video_watch_time = video_data["Watch time (hours)"].iloc[0]
-    video_revenue = video_data["Video estimated revenue (USD)"].iloc[0]
     
-    st.write(f"### Total Views for **{selected_video}**: {video_total_views:.2f}")
-    st.write(f"### Total Watch Time: {video_watch_time:.2f} hours")
-    st.write(f"### Total Revenue: ${video_revenue:.2f}")
-    
-    # Comparison with baselines
-    st.write(f"### Video Views Baseline: {baseline_video_views:.2f}")
-    st.write(f"### Watch Time Baseline: {baseline_watch_time:.2f} hours")
-    st.write(f"### Revenue Baseline: ${baseline_revenue:.2f}")
-    
-    # Add interactive chart for selected video
-    video_metrics = pd.DataFrame({
-        "Metric": ["Video views", "Watch time (hours)", "Estimated revenue (USD)"],
-        "Selected Video": [video_total_views, video_watch_time, video_revenue],
-        "Baseline": [baseline_video_views, baseline_watch_time, baseline_revenue]
-    })
+    if not video_data.empty:
+        # Safely access the metrics
+        video_total_views = video_data["Video views"].iloc[0]
+        video_watch_time = video_data["Watch time (hours)"].iloc[0]
+        video_revenue = video_data["Video estimated revenue (USD)"].iloc[0]
+        
+        st.write(f"### Total Views for **{selected_video}**: {video_total_views:.2f}")
+        st.write(f"### Total Watch Time: {video_watch_time:.2f} hours")
+        st.write(f"### Total Revenue: ${video_revenue:.2f}")
+        
+        # Comparison with baselines
+        st.write(f"### Video Views Baseline: {baseline_video_views:.2f}")
+        st.write(f"### Watch Time Baseline: {baseline_watch_time:.2f} hours")
+        st.write(f"### Revenue Baseline: ${baseline_revenue:.2f}")
+        
+        # Add interactive chart for selected video
+        video_metrics = pd.DataFrame({
+            "Metric": ["Video views", "Watch time (hours)", "Video estimated revenue (USD)"],
+            "Selected Video": [video_total_views, video_watch_time, video_revenue],
+            "Baseline": [baseline_video_views, baseline_watch_time, baseline_revenue]
+        })
 
-    fig_video = px.bar(
-        video_metrics,
-        x="Metric",
-        y=["Selected Video", "Baseline"],
-        barmode="group",
-        title=f"Performance Metrics for '{selected_video}' vs. Baseline",
-        text_auto=True
-    )
-    st.plotly_chart(fig_video, use_container_width=True)
+        fig_video = px.bar(
+            video_metrics,
+            x="Metric",
+            y=["Selected Video", "Baseline"],
+            barmode="group",
+            title=f"Performance Metrics for '{selected_video}' vs. Baseline",
+            text_auto=True
+        )
+        st.plotly_chart(fig_video, use_container_width=True)
 
-    # Download button for CSV
-    st.download_button(
-        label="Download Selected Video Data as CSV",
-        data=video_data.to_csv(index=False),
-        file_name=f"{selected_video}_data.csv",
-        mime="text/csv"
-    )
+        # Download button for CSV
+        st.download_button(
+            label="Download Selected Video Data as CSV",
+            data=video_data.to_csv(index=False),
+            file_name=f"{selected_video}_data.csv",
+            mime="text/csv"
+        )
+    else:
+        st.warning("No data available for the selected video. Please try another title.")
 
 # Section 3: Recommendations Based on Insights
 st.subheader("💡 Recommendations Based on Metrics")
