@@ -25,7 +25,7 @@ data["Video title"] = data["Video title"].str.strip()
 baseline_views = data["Views"].mean()
 baseline_video_views = data["Video views"].mean()
 baseline_watch_time = data["Watch time (hours)"].mean()
-baseline_revenue = data["Estimated revenue (USD)"].mean()
+baseline_video_revenue = data["Video estimated revenue (USD)"].mean()
 
 st.title("📊 DangerTV Programming Strategy Insights")
 
@@ -67,8 +67,8 @@ fig_revenue = px.bar(
     labels={"x": "Day of Week", "Estimated revenue (USD)": "Average Revenue (USD)"},
     text_auto=True
 )
-fig_revenue.add_hline(y=baseline_revenue, line_dash="dash", line_color="red", 
-    annotation_text=f"Revenue Baseline (${baseline_revenue:.2f})", annotation_position="bottom right")
+fig_revenue.add_hline(y=baseline_video_revenue, line_dash="dash", line_color="red", 
+    annotation_text=f"Revenue Baseline (${baseline_video_revenue:.2f})", annotation_position="bottom right")
 
 # Display interactive plots
 st.plotly_chart(fig_views, use_container_width=True)
@@ -87,7 +87,7 @@ if selected_video:
         # Safely access the metrics
         video_total_views = video_data["Video views"].iloc[0]
         video_watch_time = video_data["Watch time (hours)"].iloc[0]
-        video_revenue = video_data["Estimated revenue (USD)"].iloc[0]
+        video_revenue = video_data["Video estimated revenue (USD)"].iloc[0]
         
         st.write(f"### Total Views for **{selected_video}**: {video_total_views:.2f}")
         st.write(f"### Total Watch Time: {video_watch_time:.2f} hours")
@@ -96,13 +96,13 @@ if selected_video:
         # Comparison with baselines
         st.write(f"### Video Views Baseline: {baseline_video_views:.2f}")
         st.write(f"### Watch Time Baseline: {baseline_watch_time:.2f} hours")
-        st.write(f"### Revenue Baseline: ${baseline_revenue:.2f}")
+        st.write(f"### Revenue Baseline: ${baseline_video_revenue:.2f}")
         
         # Add interactive chart for selected video
         video_metrics = pd.DataFrame({
-            "Metric": ["Video views", "Watch time (hours)", "Estimated revenue (USD)"],
+            "Metric": ["Video views", "Watch time (hours)", "Video estimated revenue (USD)"],
             "Selected Video": [video_total_views, video_watch_time, video_revenue],
-            "Baseline": [baseline_video_views, baseline_watch_time, baseline_revenue]
+            "Baseline": [baseline_video_views, baseline_watch_time, baseline_video_revenue]
         })
 
         fig_video = px.bar(
