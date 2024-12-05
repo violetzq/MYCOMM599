@@ -5,10 +5,10 @@ import plotly.express as px
 # Page Configuration
 st.set_page_config(page_title="DangerTV Programming Strategy", page_icon="📊", layout="wide")
 
-# Load Datasethttps://github.com/violetzq/MYCOMM599/blob/8a7da2ecd8ca50b01a1245ac174a3e7025374e4b/dates%20data.csv
+# Load Dataset
 @st.cache_data
 def load_content_data():
-    url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/8a7da2ecd8ca50b01a1245ac174a3e7025374e4b/dates_data.csv"
+    url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/84cd75198ecf5dcbb12c016338fd08652bba907c/dates%20data.csv"
     return pd.read_csv(url)
 
 # Load Data
@@ -80,7 +80,7 @@ if selected_video:
     video_data = data[data["Video title"] == selected_video]
     video_total_views = video_data["Video views"].iloc[0]
     video_watch_time = video_data["Watch time (hours)"].iloc[0]
-    video_revenue = video_data["Estimated revenue (USD)"].iloc[0]
+    video_revenue = video_data["Video estimated revenue (USD)"].iloc[0]
     
     st.write(f"### Total Views for **{selected_video}**: {video_total_views:.2f}")
     st.write(f"### Total Watch Time: {video_watch_time:.2f} hours")
