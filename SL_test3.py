@@ -18,14 +18,12 @@ data = load_content_data()
 data["Date"] = pd.to_datetime(data["Date"])  # Ensure 'Date' is in datetime format
 data["Day of Week"] = data["Date"].dt.day_name()  # Extract day of the week
 
-# Clean "Video title" column to avoid mismatches
-data["Video title"] = data["Video title"].str.strip()
-
 # Calculate Baselines
 baseline_views = data["Views"].mean()
 baseline_video_views = data["Video views"].mean()
 baseline_watch_time = data["Watch time (hours)"].mean()
 baseline_video_revenue = data["Video estimated revenue (USD)"].mean()
+baseline_estimated_revenue = data["Estimated revenue (USD)"].mean()
 
 st.title("📊 DangerTV Programming Strategy Insights")
 
@@ -67,8 +65,8 @@ fig_revenue = px.bar(
     labels={"x": "Day of Week", "Estimated revenue (USD)": "Average Revenue (USD)"},
     text_auto=True
 )
-fig_revenue.add_hline(y=baseline_video_revenue, line_dash="dash", line_color="red", 
-    annotation_text=f"Revenue Baseline (${baseline_video_revenue:.2f})", annotation_position="bottom right")
+fig_revenue.add_hline(y=baseline_estimated_revenue, line_dash="dash", line_color="red", 
+    annotation_text=f"Revenue Baseline (${baseline_estimated_revenue:.2f})", annotation_position="bottom right")
 
 # Display interactive plots
 st.plotly_chart(fig_views, use_container_width=True)
