@@ -8,7 +8,7 @@ st.set_page_config(page_title="DangerTV Programming Strategy", page_icon="📊",
 # Load Dataset
 @st.cache_data
 def load_content_data():
-    url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/84cd75198ecf5dcbb12c016338fd08652bba907c/dates%20data.csv"
+    url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/919d85a4502a9906dafce8935dc413e86f8690c3/dates%20data.csv"
     return pd.read_csv(url)
 
 # Load Data
@@ -17,6 +17,9 @@ data = load_content_data()
 # Data Preparation
 data["Date"] = pd.to_datetime(data["Date"])  # Ensure 'Date' is in datetime format
 data["Day of Week"] = data["Date"].dt.day_name()  # Extract day of the week
+
+# Clean "Video title" column to avoid mismatches
+data["Video title"] = data["Video title"].str.strip()
 
 # Calculate Baselines
 baseline_views = data["Views"].mean()
@@ -77,18 +80,14 @@ st.subheader("🎥 Video Performance Insights")
 selected_video = st.selectbox("Select a Video Title:", data["Video title"].unique())
 
 if selected_video:
-    # Clean video titles in the DataFrame to avoid mismatch
-    data["Video title"] = data["Video title"].str.strip()
-    selected_video = selected_video.strip()
-    
-    # Filter the data for the selected video
+    selected_video = selected_video.strip()  # Ensure selected title is stripped of whitespace
     video_data = data[data["Video title"] == selected_video]
     
     if not video_data.empty:
         # Safely access the metrics
         video_total_views = video_data["Video views"].iloc[0]
         video_watch_time = video_data["Watch time (hours)"].iloc[0]
-        video_revenue = video_data["Video estimated revenue (USD)"].iloc[0]
+        video_revenue = video_data["Estimated revenue (USD)"].iloc[0]
         
         st.write(f"### Total Views for **{selected_video}**: {video_total_views:.2f}")
         st.write(f"### Total Watch Time: {video_watch_time:.2f} hours")
@@ -101,7 +100,7 @@ if selected_video:
         
         # Add interactive chart for selected video
         video_metrics = pd.DataFrame({
-            "Metric": ["Video views", "Watch time (hours)", "Video estimated revenue (USD)"],
+            "Metric": ["Video views", "Watch time (hours)", "Estimated revenue (USD)"],
             "Selected Video": [video_total_views, video_watch_time, video_revenue],
             "Baseline": [baseline_video_views, baseline_watch_time, baseline_revenue]
         })
