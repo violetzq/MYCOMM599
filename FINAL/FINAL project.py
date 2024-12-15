@@ -38,12 +38,12 @@ def load_csv(url):
 
 # URLs for datasets
 urls = {
-    "age": "https://github.com/violetzq/MYCOMM599/blob/0fdc8759eec374661699f73e76828909d7735a46/FINAL/dataset/viewer_age.csv",
-    "gender": "https://github.com/violetzq/MYCOMM599/blob/0fdc8759eec374661699f73e76828909d7735a46/FINAL/dataset/Viewer_gender.csv",
-    "cities": "https://github.com/violetzq/MYCOMM599/blob/0fdc8759eec374661699f73e76828909d7735a46/FINAL/dataset/Viewer_Cities.csv",
-    "subscriptions": "https://github.com/violetzq/MYCOMM599/blob/0fdc8759eec374661699f73e76828909d7735a46/FINAL/dataset/Subscription_status.csv",
-    "content": "https://github.com/violetzq/MYCOMM599/blob/0fdc8759eec374661699f73e76828909d7735a46/FINAL/dataset/DangerTV_Content.csv",
-    "dates": "https://github.com/violetzq/MYCOMM599/blob/0fdc8759eec374661699f73e76828909d7735a46/FINAL/dataset/dates%20data.csv",
+    "age": "https://raw.githubusercontent.com/violetzq/MYCOMM599/0fdc8759eec374661699f73e76828909d7735a46/FINAL/dataset/viewer_age.csv",
+    "gender": "https://raw.githubusercontent.com/violetzq/MYCOMM599/0fdc8759eec374661699f73e76828909d7735a46/FINAL/dataset/Viewer_gender.csv",
+    "cities": "https://raw.githubusercontent.com/violetzq/MYCOMM599/0fdc8759eec374661699f73e76828909d7735a46/FINAL/dataset/Viewer_Cities.csv",
+    "subscriptions": "https://raw.githubusercontent.com/violetzq/MYCOMM599/0fdc8759eec374661699f73e76828909d7735a46/FINAL/dataset/Subscription_status.csv",
+    "content": "https://raw.githubusercontent.com/violetzq/MYCOMM599/0fdc8759eec374661699f73e76828909d7735a46/FINAL/dataset/DangerTV_Content.csv",
+    "dates": "https://raw.githubusercontent.com/violetzq/MYCOMM599/0fdc8759eec374661699f73e76828909d7735a46/FINAL/dataset/dates%20data.csv",
 }
 
 # Load datasets
