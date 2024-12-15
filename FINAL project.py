@@ -25,40 +25,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Centered Title
-st.markdown("<h1>📊 YouTube Analytics & Content Insights</h1>", unsafe_allow_html=True)
-
-# Tabs for Navigation
-tabs = st.tabs(["🎥 YouTube Audience Insights", "📈 Content Performance Analysis", "📊 DangerTV Programming Strategy"])
-
-# Data Loading Functions
-@st.cache_data
-def load_csv(url):
-    return pd.read_csv(url)
-
-# URLs for datasets
-urls = {
-    "age": "https://raw.githubusercontent.com/violetzq/MYCOMM599/d2b8d453f51659fc91da08228a8c648b979b0764/viewer_age.csv",
-    "gender": "https://raw.githubusercontent.com/violetzq/MYCOMM599/d2b8d453f51659fc91da08228a8c648b979b0764/Viewer_gender.csv",
-    "cities": "https://raw.githubusercontent.com/violetzq/MYCOMM599/d2b8d453f51659fc91da08228a8c648b979b0764/Viewer_Cities.csv",
-    "subscriptions": "https://raw.githubusercontent.com/violetzq/MYCOMM599/d2b8d453f51659fc91da08228a8c648b979b0764/Subscription_status.csv",
-    "content": "https://raw.githubusercontent.com/violetzq/MYCOMM599/d2b8d453f51659fc91da08228a8c648b979b0764/DangerTV_Content.csv",
-    "dates": "https://raw.githubusercontent.com/violetzq/MYCOMM599/d2b8d453f51659fc91da08228a8c648b979b0764/dates%20data.csv"
-}
-
-
-# Load datasets
-age_data = load_csv(urls["age"])
-gender_data = load_csv(urls["gender"])
-cities_data = load_csv(urls["cities"])
-subscriptions_data = load_csv(urls["subscriptions"])
-content_data = load_csv(urls["content"])
-dates_data = load_csv(urls["dates"])
-
-# Preprocessing for dates_data
-dates_data["Date"] = pd.to_datetime(dates_data["Date"])
-dates_data["Day of Week"] = dates_data["Date"].dt.day_name()
-
 # Helper Functions for Visualizations
 def plot_bar(data, x, y, title, palette, figsize=(10, 5), xlabel=None, ylabel=None):
     fig, ax = plt.subplots(figsize=figsize)
@@ -69,10 +35,9 @@ def plot_bar(data, x, y, title, palette, figsize=(10, 5), xlabel=None, ylabel=No
     st.pyplot(fig)
 
 def plot_heatmap(data, index, value, title, cmap, figsize=(10, 6)):
-    pivot_data = data.pivot_table(index=index, values=value, aggfunc="sum")
     fig, ax = plt.subplots(figsize=figsize)
     sns.heatmap(
-        pivot_data,
+        data.pivot_table(index=index, values=value, aggfunc="sum"),
         cmap=cmap,
         annot=True,
         fmt=".0f",
@@ -83,9 +48,42 @@ def plot_heatmap(data, index, value, title, cmap, figsize=(10, 6)):
     ax.set_title(title, fontsize=14)
     st.pyplot(fig)
 
+# Tabs for Navigation
+tabs = st.tabs([
+    "🎥 YouTube Audience Insights",
+    "📈 Content Performance Analysis",
+    "📊 DangerTV Programming Strategy"
+])
+
+# Data Loading Functions
+@st.cache_data
+def load_csv(url):
+    return pd.read_csv(url)
+
+# URLs for datasets
+urls = {
+    "age": "https://raw.githubusercontent.com/violetzq/MYCOMM599/028782a8bd347b54aa1c748cd8c985e8b1d39645/viewer_age.csv",
+    "gender": "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Viewer_gender.csv",
+    "cities": "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Viewer_Cities.csv",
+    "subscriptions": "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Subscription_status.csv",
+    "content": "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/DangerTV_Content.csv",
+    "strategy": "https://raw.githubusercontent.com/violetzq/MYCOMM599/919d85a4502a9906dafce8935dc413e86f8690c3/dates%20data.csv",
+}
+
 # Tab 1: YouTube Audience Insights
 with tabs[0]:
     st.header("🎥 YouTube Audience Insights")
+
+    # Load Audience Data
+    try:
+        age_data = load_csv(urls["age"])
+        gender_data = load_csv(urls["gender"])
+        cities_data = load_csv(urls["cities"])
+        subscription_data = load_csv(urls["subscriptions"])
+        gender_data = gender_data[gender_data["Viewer gender"] != "User-specified"]  # Clean gender data
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        st.stop()
 
     # Age Distribution
     st.subheader("📊 Age Distribution")
@@ -93,12 +91,11 @@ with tabs[0]:
 
     # Gender Distribution
     st.subheader("👩‍💼👨‍💼 Gender Distribution")
-    gender_data = gender_data[gender_data["Viewer gender"] != "User-specified"]  # Clean gender data
     plot_bar(gender_data, "Viewer gender", "Views (%)", "Gender Distribution of Views", "coolwarm")
 
     # Subscription Status
     st.subheader("🔔 Subscription Status")
-    plot_bar(subscriptions_data, "Subscription status", "Views", "Views by Subscription Status", "Set2")
+    plot_bar(subscription_data, "Subscription status", "Views", "Views by Subscription Status", "Set2")
 
     # Top Cities by Views
     st.subheader("🌆 Top Cities by Views")
@@ -126,6 +123,13 @@ with tabs[0]:
 # Tab 2: Content Performance Analysis
 with tabs[1]:
     st.header("📈 Content Performance Analysis")
+
+    # Load Content Data
+    try:
+        content_data = load_csv(urls["content"])
+    except Exception as e:
+        st.error(f"Error loading content data: {e}")
+        st.stop()
 
     # Assign Categories
     categories = {
@@ -187,16 +191,26 @@ with tabs[1]:
 # Tab 3: DangerTV Programming Strategy
 with tabs[2]:
     st.header("📊 DangerTV Programming Strategy Insights")
+    
+    # Load Strategy Data
+    try:
+        data = load_csv(urls["strategy"])
+    except Exception as e:
+        st.error(f"Error loading strategy data: {e}")
+        st.stop()
+
+    data["Date"] = pd.to_datetime(data["Date"])
+    data["Day of Week"] = data["Date"].dt.day_name()
 
     # Baselines
-    baseline_views = dates_data["Views"].mean()
-    baseline_video_views = dates_data["Video views"].mean()
-    baseline_watch_time = dates_data["Watch time (hours)"].mean()
-    baseline_video_revenue = dates_data["Video estimated revenue (USD)"].mean()
-    baseline_estimated_revenue = dates_data["Estimated revenue (USD)"].mean()
+    baseline_views = data["Views"].mean()
+    baseline_video_views = data["Video views"].mean()
+    baseline_watch_time = data["Watch time (hours)"].mean()
+    baseline_video_revenue = data["Video estimated revenue (USD)"].mean()
+    baseline_estimated_revenue = data["Estimated revenue (USD)"].mean()
 
     # Day of Week Analysis
-    average_metrics_day = dates_data.groupby("Day of Week")[["Views", "Watch time (hours)", "Estimated revenue (USD)"]].mean().reindex(
+    average_metrics_day = data.groupby("Day of Week")[["Views", "Watch time (hours)", "Estimated revenue (USD)"]].mean().reindex(
         ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     )
 
@@ -209,20 +223,20 @@ with tabs[2]:
         labels={"x": "Day of Week", "Views": "Average Views"},
         text_auto=True
     )
-    fig_views.add_hline(y=baseline_views, line_dash="dash", line_color="red",
+    fig_views.add_hline(y=baseline_views, line_dash="dash", line_color="red", 
         annotation_text=f"Daily Views Baseline ({baseline_views:.0f})", annotation_position="bottom right")
-
+    
     fig_watch_time = px.bar(
         average_metrics_day,
         x=average_metrics_day.index,
         y="Watch time (hours)",
-        title="Average Watch Time (hours) by Day of Week",
+        title="Average Watch Time by Day of Week",
         labels={"x": "Day of Week", "Watch time (hours)": "Average Watch Time (hours)"},
         text_auto=True
     )
-    fig_watch_time.add_hline(y=baseline_watch_time, line_dash="dash", line_color="red",
+    fig_watch_time.add_hline(y=baseline_watch_time, line_dash="dash", line_color="red", 
         annotation_text=f"Watch Time Baseline ({baseline_watch_time:.0f} hours)", annotation_position="bottom right")
-
+    
     fig_revenue = px.bar(
         average_metrics_day,
         x=average_metrics_day.index,
@@ -231,7 +245,7 @@ with tabs[2]:
         labels={"x": "Day of Week", "Estimated revenue (USD)": "Average Revenue (USD)"},
         text_auto=True
     )
-    fig_revenue.add_hline(y=baseline_estimated_revenue, line_dash="dash", line_color="red",
+    fig_revenue.add_hline(y=baseline_estimated_revenue, line_dash="dash", line_color="red", 
         annotation_text=f"Revenue Baseline (${baseline_estimated_revenue:.2f})", annotation_position="bottom right")
 
     st.plotly_chart(fig_views, use_container_width=True)
@@ -240,21 +254,17 @@ with tabs[2]:
 
     # Section 2: Video Analysis with CSV Download
     st.subheader("🎥 Video Performance Insights")
-    if "Video title" in dates_data.columns:
-        selected_video = st.selectbox("Select a Video Title:", dates_data["Video title"].dropna().unique())
+    if "Video title" in data.columns:
+        selected_video = st.selectbox("Select a Video Title:", data["Video title"].unique())
 
         if selected_video:
-            video_data = dates_data[dates_data["Video title"] == selected_video]
+            selected_video = selected_video.strip()  # Ensure selected title is stripped of whitespace
+            video_data = data[data["Video title"] == selected_video]
 
             if not video_data.empty:
-                # Safely access the metrics
-                video_total_views = video_data["Video views"].iloc[0]
-                video_watch_time = video_data["Watch time (hours)"].iloc[0]
-                video_revenue = video_data["Video estimated revenue (USD)"].iloc[0]
-
-                st.write(f"### Total Views for **{selected_video}**: {video_total_views:.2f}")
-                st.write(f"### Total Watch Time: {video_watch_time:.2f} hours")
-                st.write(f"### Total Revenue: ${video_revenue:.2f}")
+                st.write(f"### Total Views for **{selected_video}**: {video_data['Video views'].iloc[0]:.2f}")
+                st.write(f"### Total Watch Time: {video_data['Watch time (hours)'].iloc[0]:.2f} hours")
+                st.write(f"### Total Revenue: ${video_data['Video estimated revenue (USD)'].iloc[0]:.2f}")
 
                 # Comparison with baselines
                 st.write(f"### Video Views Baseline: {baseline_video_views:.2f}")
@@ -264,7 +274,11 @@ with tabs[2]:
                 # Add interactive chart for selected video
                 video_metrics = pd.DataFrame({
                     "Metric": ["Video views", "Watch time (hours)", "Video estimated revenue (USD)"],
-                    "Selected Video": [video_total_views, video_watch_time, video_revenue],
+                    "Selected Video": [
+                        video_data["Video views"].iloc[0],
+                        video_data["Watch time (hours)"].iloc[0],
+                        video_data["Video estimated revenue (USD)"].iloc[0]
+                    ],
                     "Baseline": [baseline_video_views, baseline_watch_time, baseline_video_revenue]
                 })
 
