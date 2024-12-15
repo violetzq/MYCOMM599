@@ -1,107 +1,186 @@
-import pandas as pd
 import streamlit as st
-from prophet import Prophet
+import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
-from datetime import datetime
 
-# Title and Description
-st.title("Audience Engagement Predictor")
-st.markdown("Use historical data to predict future audience engagement.")
+# Page Configuration
+st.set_page_config(page_title="YouTube Analytics & Insights", page_icon="📊", layout="wide")
 
-# Load Dataset
-@st.cache_data
-def load_data():
-    url = "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/DangerTV_Content.csv"
-    return pd.read_csv(url)
-
-try:
-    data = load_data()
-except Exception as e:
-    st.error(f"Error loading data: {e}")
-    st.stop()
-
-# Data preprocessing
-try:
-    if "Video publish time" not in data.columns or "Views" not in data.columns:
-        st.error("Required columns are missing from the dataset.")
-        st.stop()
-
-    data.rename(columns={"Video publish time": "ds", "Views": "y"}, inplace=True)
-    data['ds'] = pd.to_datetime(data['ds'], errors='coerce')
-    data['y'] = pd.to_numeric(data['y'], errors='coerce')
-    data = data.dropna(subset=['ds', 'y'])
-except Exception as e:
-    st.error(f"Error processing data: {e}")
-    st.stop()
-
-# Sidebar options
-st.sidebar.subheader("Prediction Settings")
-periods_input = st.sidebar.number_input(
-    "How many future days would you like to predict?", min_value=1, max_value=730, value=365
+# Custom CSS for Layout
+st.markdown(
+    """
+    <style>
+        .block-container {
+            max-width: 1000px; /* Set max width for content */
+            margin: auto;
+            padding: 2rem;
+        }
+        h1 {
+            text-align: center;
+            color: #4a90e2;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
-# Display historical data
-st.subheader("Historical Data")
-if not data.empty:
-    st.write(data.head())
-    st.subheader("Historical Views Over Time")
+# Centered Title
+st.markdown("<h1>📊 YouTube Analytics & Content Insights</h1>", unsafe_allow_html=True)
+
+# Tabs for Navigation
+tabs = st.tabs(["🎥 YouTube Audience Insights", "📈 Content Performance Analysis"])
+
+# Data Loading Functions
+@st.cache_data
+def load_csv(url):
+    return pd.read_csv(url)
+
+# URLs for datasets
+urls = {
+    "age": "https://raw.githubusercontent.com/violetzq/MYCOMM599/028782a8bd347b54aa1c748cd8c985e8b1d39645/viewer_age.csv",
+    "gender": "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Viewer_gender.csv",
+    "cities": "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Viewer_Cities.csv",
+    "subscriptions": "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/Subscription_status.csv",
+    "content": "https://raw.githubusercontent.com/violetzq/MYCOMM599/main/DangerTV_Content.csv",
+}
+
+# Helper Functions for Visualizations
+def plot_bar(data, x, y, title, palette, figsize=(10, 5), xlabel=None, ylabel=None):
+    fig, ax = plt.subplots(figsize=figsize)
+    sns.barplot(data=data, x=x, y=y, palette=palette, ax=ax)
+    ax.set_title(title, fontsize=14)
+    if xlabel: ax.set_xlabel(xlabel)
+    if ylabel: ax.set_ylabel(ylabel)
+    st.pyplot(fig)
+
+def plot_heatmap(data, index, value, title, cmap, figsize=(10, 6)):
+    fig, ax = plt.subplots(figsize=figsize)
+    sns.heatmap(
+        data.pivot_table(index=index, values=value, aggfunc="sum"),
+        cmap=cmap,
+        annot=True,
+        fmt=".0f",
+        linewidths=0.5,
+        cbar_kws={"label": value},
+        ax=ax,
+    )
+    ax.set_title(title, fontsize=14)
+    st.pyplot(fig)
+
+# Tab 1: YouTube Audience Insights
+with tabs[0]:
+    st.header("🎥 YouTube Audience Insights")
+
+    # Load Audience Data
     try:
-        st.line_chart(data.set_index('ds')['y'])
+        age_data = load_csv(urls["age"])
+        gender_data = load_csv(urls["gender"])
+        cities_data = load_csv(urls["cities"])
+        subscription_data = load_csv(urls["subscriptions"])
+        gender_data = gender_data[gender_data["Viewer gender"] != "User-specified"]  # Clean gender data
     except Exception as e:
-        st.error(f"Error plotting historical data: {e}")
-else:
-    st.error("No historical data available to display.")
-    st.stop()
+        st.error(f"Error loading data: {e}")
+        st.stop()
 
-# Model training and prediction
-model = Prophet(yearly_seasonality=True, daily_seasonality=False)
-try:
-    model.fit(data[['ds', 'y']])
-    future = model.make_future_dataframe(periods=periods_input, freq='D')
-    forecast = model.predict(future)
-    st.write(f"Future DataFrame start: {future['ds'].min()}, Future DataFrame end: {future['ds'].max()}")
-    st.subheader("Forecasted Data")
-    st.write(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail())
-except Exception as e:
-    st.error(f"Error during future prediction: {e}")
-    st.stop()
+    # Age Distribution
+    st.subheader("📊 Age Distribution")
+    plot_bar(age_data, "Viewer age", "Views (%)", "Age Group Distribution of Views", "viridis")
 
-# Clamp negative predictions to zero
-forecast['yhat'] = forecast['yhat'].apply(lambda x: max(x, 0))
+    # Gender Distribution
+    st.subheader("👩‍💼👨‍💼 Gender Distribution")
+    plot_bar(gender_data, "Viewer gender", "Views (%)", "Gender Distribution of Views", "coolwarm")
 
-# Forecast plot
-st.subheader("Forecasted Views Over Time")
-try:
-    fig1, ax1 = plt.subplots(figsize=(10, 6))
-    model.plot(forecast, ax=ax1)
-    st.pyplot(fig1)
-except Exception as e:
-    st.error(f"Error generating forecast plot: {e}")
+    # Subscription Status
+    st.subheader("🔔 Subscription Status")
+    plot_bar(subscription_data, "Subscription status", "Views", "Views by Subscription Status", "Set2")
 
-# Components plot
-st.subheader("Forecast Components")
-try:
-    fig2 = model.plot_components(forecast)
-    st.pyplot(fig2)
-except Exception as e:
-    st.error(f"Error generating components plot: {e}")
+    # Top Cities by Views
+    st.subheader("🌆 Top Cities by Views")
+    top_cities = cities_data.sort_values(by="Views", ascending=False).head(10)
+    plot_bar(top_cities, "Views", "City name", "Top 10 Cities by Views", "mako", xlabel="Views", ylabel="City")
 
-# Insights from forecast
-st.subheader("Insights from Future Forecast")
-try:
-    today = datetime.today()
-    future_forecast = forecast[forecast['ds'] > pd.Timestamp(today.date())]
+    # Heatmaps
+    st.subheader("🗺️ Heatmap of Views by City")
+    plot_heatmap(cities_data.sort_values(by="Views", ascending=False).head(20), "City name", "Views", "Views by City", "Blues")
 
-    if future_forecast.empty:
-        st.warning("No future predictions found. Ensure sufficient future periods are defined in the prediction settings.")
-        st.write(f"Forecast available from: {forecast['ds'].min()} to {forecast['ds'].max()}.")
-    else:
-        min_views_date = future_forecast.loc[future_forecast['yhat'].idxmin()]['ds']
-        min_views = future_forecast['yhat'].min()
-        max_views_date = future_forecast.loc[future_forecast['yhat'].idxmax()]['ds']
-        max_views = future_forecast['yhat'].max()
+    st.subheader("⏱️ Heatmap of Watch Time by City")
+    plot_heatmap(cities_data.sort_values(by="Watch time (hours)", ascending=False).head(20), "City name", "Watch time (hours)", "Watch Time by City", "Greens")
 
-        st.write(f"The lowest predicted views are {min_views:.2f}, expected on {min_views_date.date()}.")
-        st.write(f"The highest predicted views are {max_views:.2f}, expected on {max_views_date.date()}.")
-except Exception as e:
-    st.error(f"Error generating future insights: {e}")
+    # Geographic Location - Search Feature
+    st.subheader("🌍 Search by City")
+    city_search = st.text_input("Enter a City (e.g., New York, London):").strip()
+    if city_search:
+        city_results = cities_data[cities_data["City name"].str.contains(city_search, case=False, na=False)]
+        if not city_results.empty:
+            st.write("**City Search Results:**")
+            st.write(city_results.drop(columns=["Cities"], errors="ignore"))
+        else:
+            st.warning("No results found for the city.")
+
+# Tab 2: Content Performance Analysis
+with tabs[1]:
+    st.header("📈 Content Performance Analysis")
+
+    # Load Content Data
+    try:
+        content_data = load_csv(urls["content"])
+    except Exception as e:
+        st.error(f"Error loading content data: {e}")
+        st.stop()
+
+    # Assign Categories
+    categories = {
+        "Border Security": ["border", "customs", "security"],
+        "Wildlife": ["wildlife", "animal", "nature", "wild", "hunting", "bear"],
+        "Adventure": ["adventure", "journey", "explore", "trap", "wilderness", "weather", "severe", "survive", "climbing", "storm", "coast guard"],
+        "Crime": ["crime", "criminal", "police", "investigation", "drug", "jail", "sin"],
+        "Human Stories & Disaster": ["life", "story", "family", "personal", "survive", "tsunami", "earthquake", "tornado", "dead", "risk", "tribe"],
+        "Vehicles": ["car", "truck", "vehicle", "auto", "transport"],
+        "Maritime": ["ship", "boat", "ocean", "sea", "fish", "fishing", "sail", "sailor"],
+        "Bull Fight": ["bulls", "matadors"],
+        "Battle & Special Forces": ["battle", "war", "afghanistan", "training", "special forces", "rescue", "fight", "swat", "k-9"]
+    }
+
+    def assign_category(title):
+        for category, keywords in categories.items():
+            if any(keyword.lower() in str(title).lower() for keyword in keywords):
+                return category
+        return "Other"
+
+    content_data["Category"] = content_data["Video title"].apply(assign_category)
+
+    # Aggregate Data
+    category_summary = content_data.groupby("Category").agg({
+        "Views": "sum",
+        "Watch time (hours)": "sum",
+        "Impressions click-through rate (%)": "mean"
+    }).reset_index()
+
+    # Total Views by Category
+    st.subheader("📊 Total Views by Category")
+    plot_bar(category_summary, "Views", "Category", "Total Views by Category", "viridis", xlabel="Total Views", ylabel="Category")
+
+    # Insights
+    st.subheader("💡 Category Insights")
+    most_viewed = category_summary.loc[category_summary["Views"].idxmax()]
+    highest_ctr = category_summary.loc[category_summary["Impressions click-through rate (%)"].idxmax()]
+    st.write(f"- **Most viewed category:** {most_viewed['Category']} with {most_viewed['Views']:.0f} views.")
+    st.write(f"- **Highest average CTR:** {highest_ctr['Category']} with {highest_ctr['Impressions click-through rate (%)']:.2f}% CTR.")
+
+    # Top Videos by Category
+    st.subheader("🎬 Top Videos by Category")
+    selected_category = st.selectbox("Select a Category:", category_summary["Category"].tolist())
+    if selected_category:
+        top_videos = content_data[content_data["Category"] == selected_category].sort_values(by="Views", ascending=False).head(10)
+        st.write(top_videos[["Video title", "Views", "Watch time (hours)", "Impressions click-through rate (%)"]])
+
+    # Search for Videos
+    st.subheader("🔍 Search for a Specific Video")
+    video_search = st.text_input("Enter a video title or keyword:")
+    if video_search:
+        search_results = content_data[content_data["Video title"].str.contains(video_search, case=False, na=False)]
+        if not search_results.empty:
+            st.write("Search Results:")
+            st.write(search_results[["Video title", "Category", "Views", "Watch time (hours)", "Impressions click-through rate (%)"]])
+        else:
+            st.warning("No results found.")
