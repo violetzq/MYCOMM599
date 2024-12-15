@@ -28,6 +28,29 @@ st.markdown(
 # Centered Title
 st.markdown("<h1>📊 YouTube Analytics & Content Insights</h1>", unsafe_allow_html=True)
 
+# Helper Functions for Visualizations
+def plot_bar(data, x, y, title, palette, figsize=(10, 5), xlabel=None, ylabel=None):
+    fig, ax = plt.subplots(figsize=figsize)
+    sns.barplot(data=data, x=x, y=y, palette=palette, ax=ax)
+    ax.set_title(title, fontsize=14)
+    if xlabel: ax.set_xlabel(xlabel)
+    if ylabel: ax.set_ylabel(ylabel)
+    st.pyplot(fig)
+
+def plot_heatmap(data, index, value, title, cmap, figsize=(10, 6)):
+    fig, ax = plt.subplots(figsize=figsize)
+    sns.heatmap(
+        data.pivot_table(index=index, values=value, aggfunc="sum"),
+        cmap=cmap,
+        annot=True,
+        fmt=".0f",
+        linewidths=0.5,
+        cbar_kws={"label": value},
+        ax=ax,
+    )
+    ax.set_title(title, fontsize=14)
+    st.pyplot(fig)
+
 # Tabs for Navigation
 tabs = st.tabs([
     "🎥 YouTube Audience Insights",
