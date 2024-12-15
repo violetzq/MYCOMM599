@@ -54,6 +54,10 @@ subscriptions_data = load_csv(urls["subscriptions"])
 content_data = load_csv(urls["content"])
 dates_data = load_csv(urls["dates"])
 
+# Preprocessing for dates_data
+dates_data["Date"] = pd.to_datetime(dates_data["Date"])
+dates_data["Day of Week"] = dates_data["Date"].dt.day_name()
+
 # Helper Functions for Visualizations
 def plot_bar(data, x, y, title, palette, figsize=(10, 5), xlabel=None, ylabel=None):
     fig, ax = plt.subplots(figsize=figsize)
@@ -64,9 +68,10 @@ def plot_bar(data, x, y, title, palette, figsize=(10, 5), xlabel=None, ylabel=No
     st.pyplot(fig)
 
 def plot_heatmap(data, index, value, title, cmap, figsize=(10, 6)):
+    pivot_data = data.pivot_table(index=index, values=value, aggfunc="sum")
     fig, ax = plt.subplots(figsize=figsize)
     sns.heatmap(
-        data.pivot_table(index=index, values=value, aggfunc="sum"),
+        pivot_data,
         cmap=cmap,
         annot=True,
         fmt=".0f",
@@ -184,8 +189,10 @@ with tabs[2]:
 
     # Baselines
     baseline_views = dates_data["Views"].mean()
+    baseline_video_views = dates_data["Video views"].mean()
     baseline_watch_time = dates_data["Watch time (hours)"].mean()
-    baseline_revenue = dates_data["Estimated revenue (USD)"].mean()
+    baseline_video_revenue = dates_data["Video estimated revenue (USD)"].mean()
+    baseline_estimated_revenue = dates_data["Estimated revenue (USD)"].mean()
 
     # Day of Week Analysis
     average_metrics_day = dates_data.groupby("Day of Week")[["Views", "Watch time (hours)", "Estimated revenue (USD)"]].mean().reindex(
@@ -201,20 +208,20 @@ with tabs[2]:
         labels={"x": "Day of Week", "Views": "Average Views"},
         text_auto=True
     )
-    fig_views.add_hline(y=baseline_views, line_dash="dash", line_color="red", 
+    fig_views.add_hline(y=baseline_views, line_dash="dash", line_color="red",
         annotation_text=f"Daily Views Baseline ({baseline_views:.0f})", annotation_position="bottom right")
-    
+
     fig_watch_time = px.bar(
         average_metrics_day,
         x=average_metrics_day.index,
         y="Watch time (hours)",
-        title="Average Watch Time by Day of Week",
+        title="Average Watch Time (hours) by Day of Week",
         labels={"x": "Day of Week", "Watch time (hours)": "Average Watch Time (hours)"},
         text_auto=True
     )
-    fig_watch_time.add_hline(y=baseline_watch_time, line_dash="dash", line_color="red", 
+    fig_watch_time.add_hline(y=baseline_watch_time, line_dash="dash", line_color="red",
         annotation_text=f"Watch Time Baseline ({baseline_watch_time:.0f} hours)", annotation_position="bottom right")
-    
+
     fig_revenue = px.bar(
         average_metrics_day,
         x=average_metrics_day.index,
@@ -223,8 +230,8 @@ with tabs[2]:
         labels={"x": "Day of Week", "Estimated revenue (USD)": "Average Revenue (USD)"},
         text_auto=True
     )
-    fig_revenue.add_hline(y=baseline_revenue, line_dash="dash", line_color="red", 
-        annotation_text=f"Revenue Baseline (${baseline_revenue:.2f})", annotation_position="bottom right")
+    fig_revenue.add_hline(y=baseline_estimated_revenue, line_dash="dash", line_color="red",
+        annotation_text=f"Revenue Baseline (${baseline_estimated_revenue:.2f})", annotation_position="bottom right")
 
     st.plotly_chart(fig_views, use_container_width=True)
     st.plotly_chart(fig_watch_time, use_container_width=True)
@@ -232,50 +239,58 @@ with tabs[2]:
 
     # Section 2: Video Analysis with CSV Download
     st.subheader("🎥 Video Performance Insights")
-    selected_video = st.selectbox("Select a Video Title:", dates_data["Video title"].dropna().unique())
+    if "Video title" in dates_data.columns:
+        selected_video = st.selectbox("Select a Video Title:", dates_data["Video title"].dropna().unique())
 
-    if selected_video:
-        video_data = dates_data[dates_data["Video title"] == selected_video]
+        if selected_video:
+            video_data = dates_data[dates_data["Video title"] == selected_video]
 
-        if not video_data.empty:
-            video_views = video_data["Views"].values[0]
-            video_watch_time = video_data["Watch time (hours)"].values[0]
-            video_revenue = video_data["Estimated revenue (USD)"].values[0]
+            if not video_data.empty:
+                # Safely access the metrics
+                video_total_views = video_data["Video views"].iloc[0]
+                video_watch_time = video_data["Watch time (hours)"].iloc[0]
+                video_revenue = video_data["Video estimated revenue (USD)"].iloc[0]
 
-            st.write(f"### Video: {selected_video}")
-            st.write(f"**Total Views:** {video_views}")
-            st.write(f"**Total Watch Time (hours):** {video_watch_time}")
-            st.write(f"**Total Revenue (USD):** ${video_revenue:.2f}")
+                st.write(f"### Total Views for **{selected_video}**: {video_total_views:.2f}")
+                st.write(f"### Total Watch Time: {video_watch_time:.2f} hours")
+                st.write(f"### Total Revenue: ${video_revenue:.2f}")
 
-            # Comparison Chart
-            metrics_comparison = pd.DataFrame({
-                "Metric": ["Views", "Watch Time (hours)", "Revenue (USD)"],
-                "Selected Video": [video_views, video_watch_time, video_revenue],
-                "Baseline": [baseline_views, baseline_watch_time, baseline_revenue]
-            })
+                # Comparison with baselines
+                st.write(f"### Video Views Baseline: {baseline_video_views:.2f}")
+                st.write(f"### Watch Time Baseline: {baseline_watch_time:.2f} hours")
+                st.write(f"### Revenue Baseline: ${baseline_video_revenue:.2f}")
 
-            comparison_chart = px.bar(
-                metrics_comparison,
-                x="Metric",
-                y=["Selected Video", "Baseline"],
-                barmode="group",
-                title="Video Metrics vs. Baseline",
-                text_auto=True
-            )
-            st.plotly_chart(comparison_chart, use_container_width=True)
+                # Add interactive chart for selected video
+                video_metrics = pd.DataFrame({
+                    "Metric": ["Video views", "Watch time (hours)", "Video estimated revenue (USD)"],
+                    "Selected Video": [video_total_views, video_watch_time, video_revenue],
+                    "Baseline": [baseline_video_views, baseline_watch_time, baseline_video_revenue]
+                })
 
-            # Download Button
-            st.download_button(
-                label="Download Video Data as CSV",
-                data=video_data.to_csv(index=False),
-                file_name=f"{selected_video}_data.csv",
-                mime="text/csv"
-            )
-        else:
-            st.warning("No data available for the selected video.")
+                fig_video = px.bar(
+                    video_metrics,
+                    x="Metric",
+                    y=["Selected Video", "Baseline"],
+                    barmode="group",
+                    title=f"Performance Metrics for '{selected_video}' vs. Baseline",
+                    text_auto=True
+                )
+                st.plotly_chart(fig_video, use_container_width=True)
 
-    # Recommendations
-    st.subheader("💡 Recommendations Based on Insights")
+                # Download button for CSV
+                st.download_button(
+                    label="Download Selected Video Data as CSV",
+                    data=video_data.to_csv(index=False),
+                    file_name=f"{selected_video}_data.csv",
+                    mime="text/csv"
+                )
+            else:
+                st.warning("No data available for the selected video. Please try another title.")
+    else:
+        st.error("Column 'Video title' not found in the dataset.")
+
+    # Section 3: Recommendations Based on Insights
+    st.subheader("💡 Recommendations Based on Metrics")
     st.write("- **Highest Performing Days**: Based on average views and revenue, Thursdays and Sundays stand out as the best days to release content.")
     st.write("- **Revenue Insights**: To maximize revenue, focus on boosting engagement on high-performing days.")
     st.write("- **Video-Specific Strategies**: Optimize and promote videos performing below the baselines to increase their overall impact.")
